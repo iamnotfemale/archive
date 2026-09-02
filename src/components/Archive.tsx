@@ -54,6 +54,16 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
   const [editTagF, setEditTagF] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
 
+  // phone layout: no hover, the preview becomes a bottom sheet opened by tapping a row
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 720px)");
+    const sync = () => setMobile(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
   const pageRef = useRef<HTMLDivElement>(null);
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -205,6 +215,18 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
     }, 160);
   };
   const cancelLeave = () => clearTimeout(leaveTimer.current);
+  const openSheet = (it: Item) => {
+    clearTimeout(leaveTimer.current);
+    setEditing(null);
+    setConfirmDel(false);
+    setHover(it.id);
+    setLeaving(false);
+  };
+  const closeSheet = () => {
+    setHover(null);
+    setEditing(null);
+    setConfirmDel(false);
+  };
 
   /* ---------- edit ---------- */
   const startEdit = () => {
@@ -263,6 +285,7 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
     const inInput = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA");
     if (e.key === "Escape") {
       if (editing) cancelEdit();
+      else if (mobile && hover) closeSheet();
       else if (addOpen) closeAdd();
       else if (searchOpen) clearSearch();
       t?.blur?.();
@@ -332,14 +355,16 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
       </div>
 
       {/* corners */}
-      <div
-        className="corner plus"
-        title="남기기"
-        style={{ transform: addOpen ? "rotate(45deg)" : "none", color: addOpen || empty ? INK_45 : INK }}
-        onClick={() => (addOpen ? closeAdd() : openAdd())}
-      >
-        +
-      </div>
+      {!isLocked && (
+        <div
+          className="corner plus"
+          title="남기기"
+          style={{ transform: addOpen ? "rotate(45deg)" : "none", color: addOpen || empty ? INK_45 : INK }}
+          onClick={() => (addOpen ? closeAdd() : openAdd())}
+        >
+          +
+        </div>
+      )}
       <div
         className="corner slash"
         title="찾기 ( / )"
@@ -393,11 +418,20 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
                         }}
                         className={`row${on ? " on" : ""}`}
                         style={{ animationDelay: `${delay}ms` }}
-                        onMouseEnter={() => enterRow(it)}
-                        onMouseLeave={scheduleLeave}
+                        onMouseEnter={() => !mobile && enterRow(it)}
+                        onMouseLeave={() => !mobile && scheduleLeave()}
+                        onClick={() => mobile && openSheet(it)}
                       >
                         <span className="row-line" />
-                        <span className="row-title" style={{ cursor: "pointer" }} onClick={() => window.open(it.url, "_blank", "noopener")}>
+                        <span
+                          className="row-title"
+                          style={{ cursor: "pointer" }}
+                          onClick={(e) => {
+                            if (mobile) return;
+                            e.stopPropagation();
+                            window.open(it.url, "_blank", "noopener");
+                          }}
+                        >
                           <Highlight text={it.title} q={ql} />
                         </span>
                         <span className="row-meta domain">{it.domain}</span>
@@ -422,20 +456,37 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
       )}
 
       {/* hover preview in the right margin */}
+      {mobile && <div className={`pv-backdrop${pvShown ? " open" : ""}`} onClick={closeSheet} />}
       <div
         className="preview"
-        onMouseEnter={cancelLeave}
-        onMouseLeave={scheduleLeave}
-        style={{
-          top: pvTop,
-          opacity: pvShown ? 1 : 0,
-          transform: pvShown ? "translateY(0)" : "translateY(4px)",
-          transition: pvShown ? "opacity .35s ease-out, transform .35s ease-out" : "opacity .18s ease-out, transform .18s ease-out",
-          pointerEvents: pvShown ? "auto" : "none",
-        }}
+        onMouseEnter={mobile ? undefined : cancelLeave}
+        onMouseLeave={mobile ? undefined : scheduleLeave}
+        style={
+          mobile
+            ? {
+                top: "auto",
+                opacity: pvShown ? 1 : 0,
+                transform: pvShown ? "translateY(0)" : "translateY(24px)",
+                transition: "opacity .3s ease-out, transform .35s ease-out",
+                pointerEvents: pvShown ? "auto" : "none",
+              }
+            : {
+                top: pvTop,
+                opacity: pvShown ? 1 : 0,
+                transform: pvShown ? "translateY(0)" : "translateY(4px)",
+                transition: pvShown ? "opacity .35s ease-out, transform .35s ease-out" : "opacity .18s ease-out, transform .18s ease-out",
+                pointerEvents: pvShown ? "auto" : "none",
+              }
+        }
       >
         {hv && (
           <>
+            <div className="pv-head">
+              <span className="pv-title">{hv.title}</span>
+              <span className="pv-close" onClick={closeSheet}>
+                닫기
+              </span>
+            </div>
             <a href={hv.url} target="_blank" rel="noreferrer" style={{ display: "block" }}>
               <div className="thumb">
                 {hv.image ? (
@@ -453,9 +504,11 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
                 <div className={`pv-memo${hv.memo ? "" : " empty"}`}>{hv.memo || (hv.description ? hv.description.slice(0, 90) : "메모 없음")}</div>
                 <div className="pv-foot">
                   <span className="pv-tag">{hv.tag || "태그 없음"}</span>
-                  <span className="pv-btn" onClick={startEdit}>
-                    수정
-                  </span>
+                  {!isLocked && (
+                    <span className="pv-btn" onClick={startEdit}>
+                      수정
+                    </span>
+                  )}
                 </div>
               </>
             )}

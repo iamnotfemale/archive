@@ -536,7 +536,16 @@ a:hover .thumb {
   letter-spacing: 0.01em;
 }
 
-/* ---------- narrow screens: fold the margins ---------- */
+/* ---------- desktop-only pieces of the preview (shown on phones as a sheet) ---------- */
+
+.pv-head {
+  display: none;
+}
+.pv-backdrop {
+  display: none;
+}
+
+/* ---------- tablet: fold the margins ---------- */
 
 @media (max-width: 1100px) {
   .grid {
@@ -578,5 +587,156 @@ a:hover .thumb {
     left: 0;
     width: 100%;
     padding: 0 32px;
+  }
+}
+
+/* ---------- phone: one column, tap for a bottom sheet ---------- */
+
+@media (max-width: 720px) {
+  .side {
+    padding: 22px 20px 0;
+    padding-right: 96px;
+  }
+  .side-note {
+    margin-top: 8px;
+  }
+  .tags {
+    margin: 18px -20px 0;
+    padding: 0 20px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 0 18px;
+    scrollbar-width: none;
+  }
+  .tags::-webkit-scrollbar {
+    display: none;
+  }
+  .tag {
+    white-space: nowrap;
+    flex: none;
+  }
+  .corner {
+    top: 16px;
+  }
+  .corner.plus {
+    right: 62px;
+  }
+  .corner.slash {
+    right: 20px;
+  }
+  .body {
+    padding: 4px 0 140px;
+  }
+  .grid {
+    display: block;
+    padding: 0 20px;
+  }
+  .grid > :first-child:empty,
+  .grid > :last-child:empty {
+    display: none;
+  }
+  .month-label {
+    padding: 28px 0 2px;
+  }
+  .month-line {
+    display: none;
+  }
+  .row {
+    flex-wrap: wrap;
+    gap: 3px 12px;
+    padding: 12px 0;
+  }
+  .row-title {
+    flex: 1 1 100%;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    line-height: 1.45;
+  }
+  .row-meta.date {
+    width: auto;
+    margin-left: auto;
+  }
+  .field.lg input {
+    font-size: 18px;
+  }
+  .panel .field.lg {
+    margin-bottom: 20px !important;
+  }
+  .veil {
+    align-items: flex-start;
+    padding: 96px 20px 0;
+  }
+  .empty-state {
+    left: 0;
+    width: 100%;
+    padding: 0 20px;
+  }
+
+  /* preview becomes a bottom sheet */
+  .pv-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    background: rgba(244, 241, 234, 0.5);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s var(--ease);
+  }
+  .pv-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .preview {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    z-index: 5;
+    background: var(--paper);
+    border-top: 1px solid var(--line);
+    padding: 18px 20px calc(24px + env(safe-area-inset-bottom));
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .pv-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+  .pv-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .pv-close {
+    font-family: var(--serif);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--ink-42);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .thumb {
+    width: 100%;
+    height: 150px;
+  }
+  .pv-memo,
+  .pv-field.memo input {
+    font-size: 14px;
+  }
+  .pv-btn,
+  .pv-esc,
+  .pv-save {
+    padding: 6px 0;
   }
 }
