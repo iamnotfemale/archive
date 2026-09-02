@@ -178,7 +178,14 @@ input::placeholder {
   padding: 52px 0 120px;
 }
 
-/* ---------- centered veil (add / search) ---------- */
+/* ---------- inline search panel (top of the list) ---------- */
+
+.panel {
+  overflow: hidden;
+  transition: max-height 0.35s var(--ease), opacity 0.3s var(--ease);
+}
+
+/* ---------- centered veil (add) ---------- */
 
 .veil {
   position: fixed;

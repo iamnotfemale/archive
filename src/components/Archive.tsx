@@ -95,7 +95,7 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
   const hv = hover ? items.find((i) => i.id === hover) ?? null : null;
   const isEditingHv = !!hv && editing === hv.id;
   const pvShown = !!hv && (!leaving || isEditingHv);
-  const overlayOpen = addOpen || searchOpen;
+  const overlayOpen = addOpen; // only "남기기" uses the centered veil; search stays inline so filtering is visible
 
   /* ---------- transient side note ---------- */
   const say = (text: string, ms = 2400) => {
@@ -181,7 +181,7 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
       searchInput.current?.select();
     }, 60);
   };
-  const applySearch = () => setSearchOpen(false); // Enter: keep the query, lift the veil
+  const applySearch = () => searchInput.current?.blur(); // Enter: keep the query, release the keyboard
   const clearSearch = () => {
     setSearchOpen(false);
     setQ("");
@@ -294,7 +294,7 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
   /* ---------- derived labels ---------- */
   const empty = items.length === 0;
   const sideNote = empty ? "아직 남긴 것 없음" : unsorted > 0 ? `정리되지 않은 것 ${unsorted}` : `남긴 것 ${items.length}`;
-  const slashTransform = searchOpen ? "rotate(24deg)" : ql || slashHover ? "rotate(10deg)" : "none";
+  const slashTransform = searchOpen ? "rotate(24deg)" : slashHover ? "rotate(10deg)" : "none";
 
   return (
     <div className="page" ref={pageRef}>
@@ -310,11 +310,6 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
         {isLocked && <div className="side-sub">열쇠가 없어 읽기만 됩니다</div>}
         {dbError === "no_database" && <div className="side-sub">데이터베이스가 아직 연결되지 않았습니다 · Vercel Storage 에서 Neon 을 연결하세요</div>}
         {dbError === "db_failed" && <div className="side-sub">데이터베이스에 닿지 못했습니다</div>}
-        {ql && !searchOpen && (
-          <div className="side-sub clickable" style={{ animation: "rise .3s ease-out both" }} onClick={clearSearch} title="지우기">
-            “{q.trim()}” {matchCount} · 지우기
-          </div>
-        )}
         {notice && (
           <div className="side-sub" style={{ animation: "rise .3s ease-out both" }}>
             {notice}
@@ -357,6 +352,25 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
       </div>
 
       <div className="body">
+        {/* search: inline at the top so the list is seen filtering as you type */}
+        <div className="panel" inert={!searchOpen} style={{ maxHeight: searchOpen ? 120 : 0, opacity: searchOpen ? 1 : 0 }}>
+          <div className="grid">
+            <div />
+            <div className="field lg" style={{ marginBottom: 36 }}>
+              <input
+                ref={searchInput}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && applySearch()}
+                placeholder="찾을 말"
+                spellCheck={false}
+              />
+              {matchCount !== null && <span className="count">{matchCount}</span>}
+            </div>
+            <div />
+          </div>
+        </div>
+
         {months.map((m, mi) => {
           const anyVisible = m.rows.some(visible);
           return (
@@ -492,9 +506,7 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
         className={`veil${overlayOpen ? " open" : ""}`}
         inert={!overlayOpen}
         onMouseDown={(e) => {
-          if (e.target !== e.currentTarget) return;
-          if (addOpen) closeAdd();
-          else if (searchOpen) applySearch();
+          if (e.target === e.currentTarget) closeAdd();
         }}
       >
         <div className="sheet" style={{ filter: addBusy ? "blur(2px)" : "blur(0)" }}>
@@ -534,22 +546,6 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
               </div>
               <TagSuggest tags={tags} input={addTag} open={addTagF} onPick={setAddTag} />
               <div className="sheet-esc">Esc 로 닫기</div>
-            </>
-          )}
-          {searchOpen && (
-            <>
-              <div className="field lg">
-                <input
-                  ref={searchInput}
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && applySearch()}
-                  placeholder="찾을 말"
-                  spellCheck={false}
-                />
-                {matchCount !== null && <span className="count">{matchCount}</span>}
-              </div>
-              <div className="sheet-esc">Enter 로 보기 · Esc 로 지우기</div>
             </>
           )}
         </div>
