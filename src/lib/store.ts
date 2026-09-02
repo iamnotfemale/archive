@@ -149,8 +149,42 @@ const fileStore: Store = {
     }),
 };
 
+export class StoreError extends Error {
+  constructor(public code: "no_database" | "db_failed", message: string) {
+    super(message);
+  }
+}
+
+/** DATABASE_URL first; otherwise any *_URL variable holding a Postgres connection string (custom prefixes from Vercel Storage). */
+function findDatabaseUrl(): string | undefined {
+  const direct = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (direct) return direct;
+  const isPg = (v?: string) => !!v && /^postgres(ql)?:\/\//i.test(v);
+  const keys = Object.keys(process.env)
+    .filter((k) => /_URL$/i.test(k) && !/UNPOOLED|NON_POOLING|PRISMA/i.test(k) && isPg(process.env[k]))
+    .sort();
+  if (keys.length) return process.env[keys[0]];
+  const pooled = Object.keys(process.env).find((k) => /_URL/i.test(k) && isPg(process.env[k]));
+  return pooled ? process.env[pooled] : undefined;
+}
+
 export async function getStore(): Promise<Store> {
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-  return url ? pgStore(url) : fileStore;
+  const url = findDatabaseUrl();
+  if (url) {
+    try {
+      return await pgStore(url);
+    } catch (e) {
+      throw new StoreError("db_failed", e instanceof Error ? e.message : String(e));
+    }
+  }
+  // On Vercel the filesystem is read-only, so the JSON fallback can only ever read an empty list.
+  if (process.env.VERCEL) throw new StoreError("no_database", "DATABASE_URL is not set on this deployment");
+  return fileStore;
+}
+
+/** Normalize any thrown value into a JSON-able API error. */
+export function storeErrorBody(e: unknown): { status: number; body: { error: string; detail?: string } } {
+  if (e instanceof StoreError) return { status: 503, body: { error: e.code, detail: e.message } };
+  return { status: 500, body: { error: "db_failed", detail: e instanceof Error ? e.message : String(e) } };
 }
 

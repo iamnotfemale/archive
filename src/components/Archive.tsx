@@ -13,16 +13,19 @@ const ROW_MAX = 60;
 const INK = "#1F1D1A";
 const INK_45 = "rgba(31,29,26,.45)";
 
-type Props = { initialItems: Item[]; locked: boolean };
+type Props = { initialItems: Item[]; locked: boolean; dbError?: string | null };
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, { ...init, headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
   if (res.status === 401) throw new Error("locked");
-  if (!res.ok) throw new Error(`http ${res.status}`);
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? `http ${res.status}`);
+  }
   return res.json() as Promise<T>;
 }
 
-export default function Archive({ initialItems, locked }: Props) {
+export default function Archive({ initialItems, locked, dbError = null }: Props) {
   const [items, setItems] = useState(initialItems);
   const [filter, setFilter] = useState(ALL);
   const [isLocked, setIsLocked] = useState(locked);
@@ -101,10 +104,13 @@ export default function Archive({ initialItems, locked }: Props) {
     if (ms > 0) noticeTimer.current = setTimeout(() => setNotice(""), ms);
   };
   const fail = (e: unknown) => {
-    if (e instanceof Error && e.message === "locked") {
+    const code = e instanceof Error ? e.message : "";
+    if (code === "locked") {
       setIsLocked(true);
       say("열쇠가 없어 남길 수 없습니다", 3200);
-    } else say("잠시 뒤에 다시 시도해 주세요", 3200);
+    } else if (code === "no_database") say("데이터베이스가 아직 연결되지 않았습니다", 5000);
+    else if (code === "db_failed") say("데이터베이스에 닿지 못했습니다", 5000);
+    else say("잠시 뒤에 다시 시도해 주세요", 3200);
   };
 
   /* ---------- create ---------- */
@@ -302,6 +308,8 @@ export default function Archive({ initialItems, locked }: Props) {
           {sideNote}
         </div>
         {isLocked && <div className="side-sub">열쇠가 없어 읽기만 됩니다</div>}
+        {dbError === "no_database" && <div className="side-sub">데이터베이스가 아직 연결되지 않았습니다 · Vercel Storage 에서 Neon 을 연결하세요</div>}
+        {dbError === "db_failed" && <div className="side-sub">데이터베이스에 닿지 못했습니다</div>}
         {ql && !searchOpen && (
           <div className="side-sub clickable" style={{ animation: "rise .3s ease-out both" }} onClick={clearSearch} title="지우기">
             “{q.trim()}” {matchCount} · 지우기

@@ -43,7 +43,7 @@ npm run dev
 
 | 이름 | 설명 |
 |---|---|
-| `DATABASE_URL` | Postgres 연결 문자열. Neon 연동 시 자동. 없으면 JSON 파일 저장소 |
+| `DATABASE_URL` | Postgres 연결 문자열. Neon 연동 시 자동. 없으면 JSON 파일 저장소. 연결 시 접두어를 넣어 `STORAGE_URL` 처럼 이름이 바뀌어도 `postgres://` 로 시작하는 `*_URL` 변수를 자동으로 찾습니다 |
 | `ARCHIVE_TOKEN` | 쓰기 열쇠. 없으면 누구나 쓸 수 있음 (로컬용) |
 
 ## 구조
