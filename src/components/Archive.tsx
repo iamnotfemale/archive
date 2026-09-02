@@ -49,6 +49,7 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
   const [leaving, setLeaving] = useState(false);
   const [pvTop, setPvTop] = useState(200);
   const [editing, setEditing] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
   const [editMemo, setEditMemo] = useState("");
   const [editTag, setEditTag] = useState("");
   const [editTagF, setEditTagF] = useState(false);
@@ -232,6 +233,7 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
   const startEdit = () => {
     if (!hv) return;
     setEditing(hv.id);
+    setEditTitle(hv.title);
     setEditMemo(hv.memo);
     setEditTag(hv.tag);
     setConfirmDel(false);
@@ -244,7 +246,11 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
     const id = editing;
     if (!id) return;
     try {
-      const res = await api<{ item: Item }>(`/api/items/${id}`, { method: "PATCH", body: JSON.stringify({ memo: editMemo, tag: editTag }) });
+      const title = editTitle.trim();
+      const res = await api<{ item: Item }>(`/api/items/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ memo: editMemo, tag: editTag, ...(title ? { title } : {}) }), // empty title keeps the old one
+      });
       setItems((prev) => prev.map((i) => (i.id === id ? res.item : i)));
       setEditing(null);
       setConfirmDel(false);
@@ -515,6 +521,14 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
 
             {isEditingHv && (
               <>
+                <div className="pv-field title">
+                  <input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && void saveEdit()}
+                    placeholder="제목"
+                  />
+                </div>
                 <div className="pv-field memo">
                   <input
                     autoFocus

@@ -474,8 +474,15 @@ a:hover .thumb {
   border-bottom: 1px solid var(--line);
   padding-bottom: 8px;
 }
-.pv-field.memo {
+.pv-field.title {
   margin-top: 14px;
+}
+.pv-field.title input {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.pv-field.memo {
+  margin-top: 12px;
 }
 .pv-field.memo input {
   font-size: 13px;
