@@ -6,7 +6,6 @@ import { extractUrls } from "@/lib/url";
 import { dayLabel, monthKey, monthLabel, shortUrl } from "@/lib/format";
 import { distinctTags } from "@/lib/tags";
 import TagSuggest from "./TagSuggest";
-import Bookmarklet from "./Bookmarklet";
 
 const ALL = "전체";
 const UNSORTED = "__unsorted";
@@ -29,7 +28,7 @@ export default function Archive({ initialItems, locked }: Props) {
   const [isLocked, setIsLocked] = useState(locked);
   const [notice, setNotice] = useState("");
 
-  // add panel
+  // add (centered overlay)
   const [addOpen, setAddOpen] = useState(false);
   const [addUrl, setAddUrl] = useState("");
   const [addMemo, setAddMemo] = useState("");
@@ -37,7 +36,7 @@ export default function Archive({ initialItems, locked }: Props) {
   const [addTagF, setAddTagF] = useState(false);
   const [addBusy, setAddBusy] = useState(false);
 
-  // search
+  // search (centered overlay; the query stays applied after Enter)
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
   const [slashHover, setSlashHover] = useState(false);
@@ -93,6 +92,7 @@ export default function Archive({ initialItems, locked }: Props) {
   const hv = hover ? items.find((i) => i.id === hover) ?? null : null;
   const isEditingHv = !!hv && editing === hv.id;
   const pvShown = !!hv && (!leaving || isEditingHv);
+  const overlayOpen = addOpen || searchOpen;
 
   /* ---------- transient side note ---------- */
   const say = (text: string, ms = 2400) => {
@@ -152,9 +152,10 @@ export default function Archive({ initialItems, locked }: Props) {
     say(`${added}개를 남겼습니다`);
   };
 
-  /* ---------- panels ---------- */
+  /* ---------- overlays ---------- */
   const openAdd = (url = "") => {
     setHover(null);
+    setSearchOpen(false);
     setAddOpen(true);
     if (url) setAddUrl(url);
     setTimeout(() => (url ? memoInput : urlInput).current?.focus(), 60);
@@ -167,10 +168,15 @@ export default function Archive({ initialItems, locked }: Props) {
   };
   const openSearch = () => {
     setHover(null);
+    setAddOpen(false);
     setSearchOpen(true);
-    setTimeout(() => searchInput.current?.focus(), 60);
+    setTimeout(() => {
+      searchInput.current?.focus();
+      searchInput.current?.select();
+    }, 60);
   };
-  const closeSearch = () => {
+  const applySearch = () => setSearchOpen(false); // Enter: keep the query, lift the veil
+  const clearSearch = () => {
     setSearchOpen(false);
     setQ("");
   };
@@ -252,7 +258,7 @@ export default function Archive({ initialItems, locked }: Props) {
     if (e.key === "Escape") {
       if (editing) cancelEdit();
       else if (addOpen) closeAdd();
-      else if (searchOpen) closeSearch();
+      else if (searchOpen) clearSearch();
       t?.blur?.();
       return;
     }
@@ -282,7 +288,7 @@ export default function Archive({ initialItems, locked }: Props) {
   /* ---------- derived labels ---------- */
   const empty = items.length === 0;
   const sideNote = empty ? "아직 남긴 것 없음" : unsorted > 0 ? `정리되지 않은 것 ${unsorted}` : `남긴 것 ${items.length}`;
-  const slashTransform = searchOpen ? "rotate(15deg)" : slashHover ? "rotate(6deg)" : "none";
+  const slashTransform = searchOpen ? "rotate(24deg)" : ql || slashHover ? "rotate(10deg)" : "none";
 
   return (
     <div className="page" ref={pageRef}>
@@ -296,6 +302,11 @@ export default function Archive({ initialItems, locked }: Props) {
           {sideNote}
         </div>
         {isLocked && <div className="side-sub">열쇠가 없어 읽기만 됩니다</div>}
+        {ql && !searchOpen && (
+          <div className="side-sub clickable" style={{ animation: "rise .3s ease-out both" }} onClick={clearSearch} title="지우기">
+            “{q.trim()}” {matchCount} · 지우기
+          </div>
+        )}
         {notice && (
           <div className="side-sub" style={{ animation: "rise .3s ease-out both" }}>
             {notice}
@@ -332,71 +343,12 @@ export default function Archive({ initialItems, locked }: Props) {
         style={{ transform: slashTransform, color: searchOpen || empty ? INK_45 : INK }}
         onMouseEnter={() => setSlashHover(true)}
         onMouseLeave={() => setSlashHover(false)}
-        onClick={() => (searchOpen ? closeSearch() : openSearch())}
+        onClick={() => (searchOpen ? clearSearch() : openSearch())}
       >
         /
       </div>
 
       <div className="body">
-        {/* add panel */}
-        <div className="panel" inert={!addOpen} style={{ maxHeight: addOpen ? 320 : 0, opacity: addOpen ? 1 : 0 }}>
-          <div className="grid">
-            <div />
-            <div className="panel-inner" style={{ filter: addBusy ? "blur(2px)" : "blur(0)", transition: "filter .3s ease-out" }}>
-              <div className="field lg">
-                <input
-                  ref={urlInput}
-                  value={addUrl}
-                  onChange={(e) => setAddUrl(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && void submitAdd()}
-                  placeholder="링크를 붙여넣으세요"
-                  spellCheck={false}
-                />
-                <span className={`action${addUrl.trim() ? "" : " dim"}`} onClick={() => void submitAdd()}>
-                  남기기
-                </span>
-              </div>
-              <div className="field md">
-                <input
-                  ref={memoInput}
-                  value={addMemo}
-                  onChange={(e) => setAddMemo(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && void submitAdd()}
-                  placeholder="왜 남기나요"
-                />
-              </div>
-              <div className="field sm">
-                <input
-                  value={addTag}
-                  onChange={(e) => setAddTag(e.target.value)}
-                  onFocus={() => setAddTagF(true)}
-                  onBlur={() => setAddTagF(false)}
-                  onKeyDown={(e) => e.key === "Enter" && void submitAdd()}
-                  placeholder="태그"
-                />
-              </div>
-              <TagSuggest tags={tags} input={addTag} open={addTagF} onPick={setAddTag} />
-              <div className="hint">
-                페이지 아무 곳에나 붙여넣어도 됩니다 · 다른 사이트에서는 <Bookmarklet>북마클릿</Bookmarklet>으로 · Esc 로 닫기
-              </div>
-            </div>
-            <div />
-          </div>
-        </div>
-
-        {/* search panel */}
-        <div className="panel" inert={!searchOpen} style={{ maxHeight: searchOpen ? 120 : 0, opacity: searchOpen ? 1 : 0 }}>
-          <div className="grid">
-            <div />
-            <div className="field lg" style={{ marginBottom: 36 }}>
-              <input ref={searchInput} value={q} onChange={(e) => setQ(e.target.value)} placeholder="찾을 말" spellCheck={false} />
-              {matchCount !== null && <span className="count">{matchCount}</span>}
-            </div>
-            <div />
-          </div>
-        </div>
-
-        {/* months */}
         {months.map((m, mi) => {
           const anyVisible = m.rows.some(visible);
           return (
@@ -441,15 +393,9 @@ export default function Archive({ initialItems, locked }: Props) {
       </div>
 
       {/* empty state */}
-      {empty && !addOpen && (
+      {empty && (
         <div className="empty-state">
           <div className="empty-state-h">아직 아무것도 남기지 않았습니다.</div>
-          <div className="empty-state-p">
-            링크를 이 페이지 아무 곳에나 붙여넣거나, 오른쪽 위 + 를 누르세요.
-            <br />
-            다른 사이트에서는 <Bookmarklet>북마클릿</Bookmarklet>으로.
-          </div>
-          <div className="empty-state-key">⌘ V</div>
         </div>
       )}
 
@@ -531,6 +477,74 @@ export default function Archive({ initialItems, locked }: Props) {
             )}
           </>
         )}
+      </div>
+
+      {/* centered veil: add / search */}
+      <div
+        className={`veil${overlayOpen ? " open" : ""}`}
+        inert={!overlayOpen}
+        onMouseDown={(e) => {
+          if (e.target !== e.currentTarget) return;
+          if (addOpen) closeAdd();
+          else if (searchOpen) applySearch();
+        }}
+      >
+        <div className="sheet" style={{ filter: addBusy ? "blur(2px)" : "blur(0)" }}>
+          {addOpen && (
+            <>
+              <div className="field lg">
+                <input
+                  ref={urlInput}
+                  value={addUrl}
+                  onChange={(e) => setAddUrl(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && void submitAdd()}
+                  placeholder="링크를 붙여넣으세요"
+                  spellCheck={false}
+                />
+                <span className={`action${addUrl.trim() ? "" : " dim"}`} onClick={() => void submitAdd()}>
+                  남기기
+                </span>
+              </div>
+              <div className="field md">
+                <input
+                  ref={memoInput}
+                  value={addMemo}
+                  onChange={(e) => setAddMemo(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && void submitAdd()}
+                  placeholder="왜 남기나요"
+                />
+              </div>
+              <div className="field sm">
+                <input
+                  value={addTag}
+                  onChange={(e) => setAddTag(e.target.value)}
+                  onFocus={() => setAddTagF(true)}
+                  onBlur={() => setAddTagF(false)}
+                  onKeyDown={(e) => e.key === "Enter" && void submitAdd()}
+                  placeholder="태그"
+                />
+              </div>
+              <TagSuggest tags={tags} input={addTag} open={addTagF} onPick={setAddTag} />
+              <div className="sheet-esc">Esc 로 닫기</div>
+            </>
+          )}
+          {searchOpen && (
+            <>
+              <div className="field lg">
+                <input
+                  ref={searchInput}
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && applySearch()}
+                  placeholder="찾을 말"
+                  spellCheck={false}
+                />
+                {matchCount !== null && <span className="count">{matchCount}</span>}
+              </div>
+              <div className="sheet-esc">Enter 로 보기 · Esc 로 지우기</div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -116,6 +116,12 @@ input::placeholder {
 .side-note.active {
   color: var(--ink);
 }
+.side-sub.clickable {
+  cursor: pointer;
+}
+.side-sub.clickable:hover {
+  color: var(--ink);
+}
 .side-sub {
   margin-top: 6px;
   font-family: var(--serif);
@@ -172,14 +178,42 @@ input::placeholder {
   padding: 52px 0 120px;
 }
 
-/* ---------- collapsible panels (add / search) ---------- */
+/* ---------- centered veil (add / search) ---------- */
 
-.panel {
-  overflow: hidden;
-  transition: max-height 0.35s var(--ease), opacity 0.3s var(--ease);
+.veil {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 32px;
+  background: rgba(244, 241, 234, 0.55);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease);
 }
-.panel-inner {
-  margin-bottom: 36px;
+.veil.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.sheet {
+  width: 640px;
+  max-width: 100%;
+  transform: translateY(6px);
+  transition: transform 0.35s var(--ease), filter 0.3s var(--ease);
+}
+.veil.open .sheet {
+  transform: none;
+}
+.sheet-esc {
+  margin-top: 28px;
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-42);
 }
 .field {
   border-bottom: 1px solid var(--line);
@@ -195,22 +229,22 @@ input::placeholder {
   line-height: 1.4;
   letter-spacing: -0.005em;
 }
+.field.md {
+  margin-top: 36px;
+  padding-bottom: 12px;
+}
+.field.md input {
+  font-size: 15px;
+  line-height: 1.5;
+}
 .field.sm {
-  margin-top: 18px;
+  margin-top: 22px;
   padding-bottom: 10px;
 }
 .field.sm input {
   font-size: 13px;
   line-height: 1.5;
   letter-spacing: 0.06em;
-}
-.field.md {
-  margin-top: 18px;
-  padding-bottom: 10px;
-}
-.field.md input {
-  font-size: 15px;
-  line-height: 1.5;
 }
 .action {
   font-size: 14px;
@@ -229,23 +263,6 @@ input::placeholder {
   font-size: 12px;
   color: var(--ink-50);
   white-space: nowrap;
-}
-.hint {
-  margin-top: 12px;
-  font-family: var(--serif);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: var(--ink-42);
-  line-height: 1.8;
-}
-.hint a {
-  text-decoration: underline;
-  text-decoration-color: var(--line);
-  text-underline-offset: 4px;
-  cursor: grab;
-}
-.hint a:hover {
-  color: var(--ink);
 }
 
 .suggest {
@@ -510,114 +527,6 @@ a:hover .thumb {
   font-size: 17px;
   line-height: 1.7;
   letter-spacing: 0.01em;
-}
-.empty-state-p {
-  margin-top: 20px;
-  font-size: 13px;
-  line-height: 1.9;
-  color: rgba(31, 29, 26, 0.58);
-  max-width: 420px;
-  text-wrap: pretty;
-}
-.empty-state-p a {
-  text-decoration: underline;
-  text-decoration-color: var(--line);
-  text-underline-offset: 4px;
-  cursor: grab;
-}
-.empty-state-key {
-  margin-top: 56px;
-  font-family: var(--serif);
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  color: var(--ink-40);
-}
-
-/* ---------- save window (/add) ---------- */
-
-.save-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-}
-.save {
-  width: 480px;
-  max-width: 100%;
-  background: var(--paper);
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  padding: 44px 40px 36px;
-  transition: filter 0.3s var(--ease), opacity 0.3s var(--ease), transform 0.3s var(--ease);
-  animation: rise 0.5s var(--ease) both;
-}
-.save-title {
-  font-size: 16px;
-  line-height: 1.5;
-  letter-spacing: -0.005em;
-  min-height: 24px;
-  overflow-wrap: anywhere;
-  transition: color 0.3s var(--ease);
-}
-.save-title.loading {
-  color: var(--ink-38);
-}
-.save-domain {
-  margin-top: 8px;
-  font-family: var(--serif);
-  font-size: 12px;
-  color: var(--ink-50);
-  letter-spacing: 0.02em;
-}
-.save-field {
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 12px;
-}
-.save-field.memo {
-  margin-top: 44px;
-}
-.save-field.memo input {
-  font-size: 15px;
-  line-height: 1.5;
-}
-.save-field.tag {
-  margin-top: 22px;
-}
-.save-field.tag input {
-  font-size: 13px;
-  line-height: 1.5;
-  letter-spacing: 0.06em;
-}
-.save-foot {
-  margin-top: 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-.save-esc {
-  font-family: var(--serif);
-  font-size: 11px;
-  color: var(--ink-42);
-  letter-spacing: 0.04em;
-}
-.save-btn {
-  font-size: 15px;
-  letter-spacing: 0.06em;
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-decoration-color: transparent;
-  text-underline-offset: 6px;
-  transition: text-decoration-color 0.25s var(--ease), color 0.25s var(--ease);
-  user-select: none;
-}
-.save-btn:hover {
-  text-decoration-color: var(--ink);
-}
-.save-btn.dim {
-  color: var(--ink-35);
-  cursor: default;
 }
 
 /* ---------- narrow screens: fold the margins ---------- */
