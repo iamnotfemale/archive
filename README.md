@@ -5,7 +5,6 @@
 - 붙여넣기 한 번으로 저장 (페이지 아무 곳에나 `Ctrl/⌘+V`). 카톡 대화를 통째로 붙여넣으면 링크만 골라 한꺼번에 남깁니다.
 - 제목·설명·썸네일은 서버가 자동으로 가져옵니다. 사용자는 "왜 남기나요" 한 줄과 태그만.
 - `/` 로 검색, 왼쪽 여백의 태그로 좁히기, 행에 마우스를 올리면 오른쪽 여백에 미리보기.
-- 다른 사이트에서는 북마클릿으로 저장 창(`/add`)을 엽니다.
 
 ## 로컬 실행
 
@@ -39,7 +38,6 @@ npm run dev
 
 6. 브라우저에서 한 번만 `https://<사이트>/key?t=<ARCHIVE_TOKEN>` 을 엽니다. 그 브라우저는 1년 동안 쓰기 권한을 가집니다. 다른 사람은 읽기만 됩니다. 열쇠를 빼려면 `/key?t=` 을 엽니다.
 
-7. 사이트를 열고 + 를 누른 뒤, 안내 문장의 **북마클릿** 글자를 브라우저 북마크바로 끌어다 놓습니다. 어느 사이트에서든 그 북마크를 누르면 저장 창이 뜹니다.
 
 ## 환경 변수
 
@@ -52,12 +50,10 @@ npm run dev
 
 ```
 src/app/page.tsx            메인 (서버에서 목록 로드)
-src/app/add/page.tsx        북마클릿 저장 창
 src/app/key/route.ts        열쇠 쿠키 발급
 src/app/api/items           목록·저장 / 수정·삭제
 src/app/api/meta            OG 메타데이터 미리보기
-src/components/Archive.tsx  메인 화면 (리스트·검색·태그·미리보기·편집·붙여넣기)
-src/components/SaveWindow.tsx  저장 창
+src/components/Archive.tsx  메인 화면 (리스트·검색·태그·미리보기·편집·붙여넣기·중앙 입력 오버레이)
 src/lib/store.ts            Postgres 또는 JSON 파일 저장소
 src/lib/meta.ts             메타데이터 수집
 ```
