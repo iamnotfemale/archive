@@ -155,8 +155,21 @@ export class StoreError extends Error {
   }
 }
 
+/** DATABASE_URL first; otherwise any *_URL variable holding a Postgres connection string (custom prefixes from Vercel Storage). */
+function findDatabaseUrl(): string | undefined {
+  const direct = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (direct) return direct;
+  const isPg = (v?: string) => !!v && /^postgres(ql)?:\/\//i.test(v);
+  const keys = Object.keys(process.env)
+    .filter((k) => /_URL$/i.test(k) && !/UNPOOLED|NON_POOLING|PRISMA/i.test(k) && isPg(process.env[k]))
+    .sort();
+  if (keys.length) return process.env[keys[0]];
+  const pooled = Object.keys(process.env).find((k) => /_URL/i.test(k) && isPg(process.env[k]));
+  return pooled ? process.env[pooled] : undefined;
+}
+
 export async function getStore(): Promise<Store> {
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  const url = findDatabaseUrl();
   if (url) {
     try {
       return await pgStore(url);
