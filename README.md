@@ -2,9 +2,12 @@
 
 링크를 저장하고 나중에 찾아보는 개인용 링크 아카이브.
 
-카카오톡 "나에게 보내기"에 쌓이던 링크를 한곳에 모읍니다. 붙여넣기 한 번으로 저장되고, 제목·설명·썸네일은 자동으로 채워지며, 한 줄 메모와 태그로 나중에 다시 찾을 수 있습니다.
+카카오톡 "나에게 보내기"에 쌓이던 링크를 한곳에 모읍니다. 붙여넣기 한 번으로 저장되고, 태그로 나중에 다시 찾을 수 있습니다.
 
-데모: https://yeoziphab.vercel.app (읽기 전용)
+https://yeoziphab.vercel.app
+
+<img width="1917" height="906" alt="image" src="https://github.com/user-attachments/assets/2b73daba-d576-43a8-8312-99541ccfc5ae" />
+
 
 ## 기능
 
