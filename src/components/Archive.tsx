@@ -187,6 +187,7 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
     setHover(null);
     setAddOpen(false);
     setSearchOpen(true);
+    window.scrollTo({ top: 0, behavior: "smooth" }); // the search field lives above the list
     setTimeout(() => {
       searchInput.current?.focus();
       searchInput.current?.select();
@@ -411,6 +412,7 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
               </div>
               <div>
                 {mi > 0 && <div className="month-line" />}
+                <div className="month-rows">
                 {m.rows.map((it, i) => {
                   const vis = visible(it);
                   const on = hover === it.id && (!leaving || isEditingHv);
@@ -447,6 +449,7 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
                     </div>
                   );
                 })}
+                </div>
               </div>
               <div />
             </div>

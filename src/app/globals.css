@@ -91,7 +91,7 @@ input::placeholder {
 }
 
 .side {
-  position: absolute;
+  position: fixed;
   left: 72px;
   top: 56px;
   width: 240px;
@@ -156,7 +156,7 @@ input::placeholder {
 }
 
 .corner {
-  position: absolute;
+  position: fixed;
   top: 50px;
   font-family: var(--serif);
   font-size: 22px;
@@ -175,7 +175,7 @@ input::placeholder {
 }
 
 .body {
-  padding: 52px 0 120px;
+  padding: 128px 0 160px;
 }
 
 /* ---------- inline search panel (top of the list) ---------- */
@@ -297,6 +297,12 @@ input::placeholder {
 .month {
   transition: opacity 0.3s var(--ease);
 }
+.month + .month {
+  margin-top: 44px;
+}
+.month-rows {
+  padding-top: 30px;
+}
 .month-label-col {
   position: relative;
 }
@@ -304,7 +310,8 @@ input::placeholder {
   position: sticky;
   top: 56px;
   text-align: right;
-  padding: 16px 40px 0 0;
+  padding: 0 40px 0 0;
+  line-height: 20px;
   font-family: var(--serif);
   font-size: 12px;
   letter-spacing: 0.1em;
@@ -313,7 +320,7 @@ input::placeholder {
 .month-line {
   height: 1px;
   background: var(--line);
-  margin: 24px 0 28px;
+  margin: 10px 0 0;
 }
 
 .row-wrap {
@@ -573,10 +580,19 @@ a:hover .thumb {
   .body {
     padding-top: 32px;
   }
+  .corner {
+    position: absolute;
+  }
   .month-label {
     position: static;
     text-align: left;
     padding: 20px 0 0;
+  }
+  .month + .month {
+    margin-top: 16px;
+  }
+  .month-rows {
+    padding-top: 6px;
   }
   .row-line {
     display: none;
@@ -644,6 +660,12 @@ a:hover .thumb {
   }
   .month-label {
     padding: 28px 0 2px;
+  }
+  .month + .month {
+    margin-top: 0;
+  }
+  .month-rows {
+    padding-top: 0;
   }
   .month-line {
     display: none;
