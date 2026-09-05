@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Rail from "@/components/Rail";
 import PortfolioWorks from "@/components/PortfolioWorks";
 import PrintButton from "@/components/PrintButton";
@@ -6,8 +5,7 @@ import { site } from "@/content/site";
 import { cv } from "@/content/portfolio";
 import { canWrite } from "@/lib/auth";
 import { getStore } from "@/lib/store";
-import { dayLabel } from "@/lib/format";
-import type { Post, Work } from "@/lib/types";
+import type { Work } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -16,15 +14,12 @@ export const metadata = { title: `portfolio — ${site.name}` };
 export default async function PortfolioPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
   const { edit } = await searchParams;
   const writable = await canWrite();
-  let posts: Post[] = [];
   let works: Work[] = [];
   try {
     const store = await getStore();
-    const [allPosts, allWorks] = await Promise.all([store.listPosts(), store.listWorks()]);
-    posts = allPosts.filter((p) => p.status === "published" && p.scope === "public").slice(0, 3);
-    works = writable ? allWorks : allWorks.filter((w) => w.status === "published");
+    const all = await store.listWorks();
+    works = writable ? all : all.filter((w) => w.status === "published");
   } catch {
-    posts = [];
     works = [];
   }
 
@@ -63,50 +58,6 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         ))}
 
         <PortfolioWorks works={works} writable={writable} editId={edit ?? null} />
-
-        <section className="grid cv-block">
-          <div>
-            <div className="cv-label">글</div>
-          </div>
-          <div>
-            <div className="cv-line" />
-            <div className="cv-note">
-              작업의 근거는 대개{" "}
-              <Link href="/write" className="cv-inline-link">
-                /write
-              </Link>{" "}
-              에 먼저 씁니다.
-            </div>
-            {posts.map((p) => (
-              <Link key={p.id} href={`/write/${p.slug}`} className="cv-row link">
-                <span className="cv-title ellipsis">{p.title || "제목 없음"}</span>
-                {p.tag && <span className="row-meta tagname">{p.tag}</span>}
-                <span className="row-meta date">{dayLabel(p.publishedAt ?? p.updatedAt)}</span>
-              </Link>
-            ))}
-          </div>
-          <div />
-        </section>
-
-        <section className="grid cv-block">
-          <div>
-            <div className="cv-label">연락</div>
-          </div>
-          <div>
-            <div className="cv-line" />
-            <div className="cv-contacts">
-              {site.contacts.map((c) => (
-                <div key={c.label} className="cv-contact">
-                  <span className="cv-contact-label">{c.label}</span>
-                  <a href={c.href} target={c.href.startsWith("mailto:") ? undefined : "_blank"} rel="noreferrer" className="cv-contact-value">
-                    {c.value}
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div />
-        </section>
       </div>
     </div>
   );

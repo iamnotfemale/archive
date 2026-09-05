@@ -25,7 +25,7 @@ export const cv: CvBlock[] = [
     rows: [
       { title: "고려대학교 인공지능학과", sub: "제2대 학생회장", when: "2025 — " },
       { title: "VIKA", sub: "CTO", when: "2016 — " },
-      { title: "AIKU", sub: "Seinor", when: "2015 — " },
+      { title: "AIKU", sub: "Senior", when: "2025 — " },
       { title: "GDGKU", sub: "AI/ML/DL Engineer", when: "2025 — " },
       { title: "NewLearn", sub: "13th", when: "2025" },
     ],
