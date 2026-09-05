@@ -2,60 +2,35 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Rail from "@/components/Rail";
 import { site } from "@/content/site";
-import { works, type WorkSection } from "@/content/portfolio";
+import { canWrite } from "@/lib/auth";
+import { getStore } from "@/lib/store";
+import { renderBody, excerpt } from "@/lib/markdown";
+
+export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return works.map((w) => ({ slug: w.slug }));
-}
-
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  const w = works.find((x) => x.slug === slug);
-  return { title: w ? `${w.title} — ${site.name}` : site.name };
-}
-
-function Placeholder({ src, caption, height }: { src?: string; caption?: string; height?: number }) {
-  return (
-    <div className="work-img" style={{ height: height ?? 400 }}>
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={caption ?? ""} loading="lazy" />
-      ) : (
-        <span>{caption ? `이미지 · ${caption}` : "이미지"}</span>
-      )}
-    </div>
-  );
-}
-
-function Section({ s }: { s: WorkSection }) {
-  if (s.type === "text") return <p className="work-text">{s.text}</p>;
-  if (s.type === "image")
-    return (
-      <figure className="work-figure">
-        <Placeholder src={s.src} caption={s.caption} height={s.height} />
-        {s.caption && <figcaption className="work-caption">{s.caption}</figcaption>}
-      </figure>
-    );
-  return (
-    <div className="work-figures">
-      {s.items.map((it, i) => (
-        <figure key={i} className="work-figure" style={{ flex: 1 }}>
-          <Placeholder src={it.src} caption={it.caption} height={s.height ?? 240} />
-          {it.caption && it.src && <figcaption className="work-caption">{it.caption}</figcaption>}
-        </figure>
-      ))}
-    </div>
-  );
+  try {
+    const store = await getStore();
+    const w = await store.getWorkBySlug(slug);
+    return w && w.status === "published" ? { title: `${w.title} — ${site.name}`, description: excerpt(w.body) } : { title: site.name };
+  } catch {
+    return { title: site.name };
+  }
 }
 
 export default async function WorkPage({ params }: Props) {
   const { slug } = await params;
-  const idx = works.findIndex((w) => w.slug === slug);
-  if (idx < 0) notFound();
-  const w = works[idx];
-  const next = works[idx + 1] ?? works[0];
+  const store = await getStore();
+  const [w, writable] = await Promise.all([store.getWorkBySlug(slug), canWrite()]);
+  if (!w) notFound();
+  if (w.status !== "published" && !writable) notFound();
+
+  const published = (await store.listWorks()).filter((x) => x.status === "published");
+  const idx = published.findIndex((x) => x.id === w.id);
+  const next = idx >= 0 ? published[idx + 1] ?? (published.length > 1 ? published[0] : null) : null;
 
   return (
     <div className="page">
@@ -63,6 +38,11 @@ export default async function WorkPage({ params }: Props) {
         <Link href="/portfolio" className="side-sub rail-link">
           ← 작업 목록
         </Link>
+        {writable && (
+          <Link href={`/portfolio/edit/${w.id}`} className="side-sub rail-link">
+            수정
+          </Link>
+        )}
       </Rail>
 
       <div className="body">
@@ -71,24 +51,21 @@ export default async function WorkPage({ params }: Props) {
             <div className="month-label">{w.year}</div>
           </div>
           <article className="post work">
-            <h1 className="post-title">{w.title}</h1>
+            <h1 className="post-title">{w.title || "제목 없음"}</h1>
             <div className="post-meta">
-              <span>{w.kind}</span>
-              <span>{w.role}</span>
-              <span>{w.year}</span>
+              {w.kind && <span>{w.kind}</span>}
+              {w.role && <span>{w.role}</span>}
+              {w.year && <span>{w.year}</span>}
+              {w.status === "draft" && <span>초안</span>}
             </div>
-            <div className="work-body">
-              {w.sections.map((s, i) => (
-                <Section key={i} s={s} />
-              ))}
-            </div>
-            {next.slug !== w.slug && (
+            <div className="post-body">{renderBody(w.body)}</div>
+            {next && next.id !== w.id && (
               <div className="post-next">
                 <span className="pv-esc" style={{ cursor: "default" }}>
                   다음
                 </span>
                 <Link href={`/portfolio/${next.slug}`} className="post-next-link">
-                  {next.title} →
+                  {next.title || "제목 없음"} →
                 </Link>
               </div>
             )}

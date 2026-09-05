@@ -2,10 +2,10 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Work } from "@/content/portfolio";
+import type { Work } from "@/lib/types";
 
 /** 작업 목록. 행에 마우스를 올리면 오른쪽 여백에 썸네일과 한 줄 메모, 클릭하면 상세. */
-export default function Works({ works }: { works: Work[] }) {
+export default function Works({ works, writable }: { works: Work[]; writable: boolean }) {
   const router = useRouter();
   const [hover, setHover] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
@@ -16,18 +16,19 @@ export default function Works({ works }: { works: Work[] }) {
 
   const enter = (w: Work) => {
     clearTimeout(timer.current);
-    const el = rowRefs.current.get(w.slug);
+    const el = rowRefs.current.get(w.id);
     const list = listRef.current;
     if (el && list) setTop(el.getBoundingClientRect().top - list.getBoundingClientRect().top);
-    setHover(w.slug);
+    setHover(w.id);
     setLeaving(false);
   };
   const leave = () => {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setLeaving(true), 160);
   };
-  const hv = hover ? works.find((w) => w.slug === hover) ?? null : null;
+  const hv = hover ? works.find((w) => w.id === hover) ?? null : null;
   const shown = !!hv && !leaving;
+  const open = (w: Work) => router.push(w.status === "draft" ? `/portfolio/edit/${w.id}` : `/portfolio/${w.slug}`);
 
   return (
     <section className="grid cv-block" ref={listRef} style={{ position: "relative" }}>
@@ -36,22 +37,24 @@ export default function Works({ works }: { works: Work[] }) {
       </div>
       <div>
         <div className="cv-line" />
+        {works.length === 0 && writable && <div className="cv-note">오른쪽 위 + 로 첫 작업을 남기세요.</div>}
         {works.map((w) => (
           <div
-            key={w.slug}
+            key={w.id}
             ref={(el) => {
-              if (el) rowRefs.current.set(w.slug, el);
-              else rowRefs.current.delete(w.slug);
+              if (el) rowRefs.current.set(w.id, el);
+              else rowRefs.current.delete(w.id);
             }}
-            className={`row link${hover === w.slug && shown ? " on" : ""}`}
+            className={`row link${hover === w.id && shown ? " on" : ""}${w.status === "draft" ? " draft" : ""}`}
             onMouseEnter={() => enter(w)}
             onMouseLeave={leave}
-            onClick={() => router.push(`/portfolio/${w.slug}`)}
+            onClick={() => open(w)}
           >
             <span className="row-line" />
-            <span className="row-title">{w.title}</span>
-            <span className="row-meta tagname">{w.kind}</span>
-            <span className="row-meta">{w.role}</span>
+            <span className="row-title">{w.title || "제목 없음"}</span>
+            {w.status === "draft" && <span className="row-meta domain">초안</span>}
+            {w.kind && <span className="row-meta tagname">{w.kind}</span>}
+            {w.role && <span className="row-meta">{w.role}</span>}
             <span className="row-meta date">{w.year}</span>
           </div>
         ))}
@@ -62,7 +65,7 @@ export default function Works({ works }: { works: Work[] }) {
         className="work-preview"
         onMouseEnter={() => clearTimeout(timer.current)}
         onMouseLeave={leave}
-        onClick={() => hv && router.push(`/portfolio/${hv.slug}`)}
+        onClick={() => hv && open(hv)}
         style={{
           top,
           opacity: shown ? 1 : 0,

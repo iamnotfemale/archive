@@ -2,28 +2,36 @@ import Link from "next/link";
 import Rail from "@/components/Rail";
 import Works from "@/components/Works";
 import PrintButton from "@/components/PrintButton";
+import NewWorkButton from "@/components/NewWorkButton";
 import { site } from "@/content/site";
-import { cv, works } from "@/content/portfolio";
+import { cv } from "@/content/portfolio";
+import { canWrite } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { dayLabel } from "@/lib/format";
-import type { Post } from "@/lib/types";
+import type { Post, Work } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: `portfolio — ${site.name}` };
 
 export default async function PortfolioPage() {
+  const writable = await canWrite();
   let posts: Post[] = [];
+  let works: Work[] = [];
   try {
     const store = await getStore();
-    posts = (await store.listPosts()).filter((p) => p.status === "published" && p.scope === "public").slice(0, 3);
+    const [allPosts, allWorks] = await Promise.all([store.listPosts(), store.listWorks()]);
+    posts = allPosts.filter((p) => p.status === "published" && p.scope === "public").slice(0, 3);
+    works = writable ? allWorks : allWorks.filter((w) => w.status === "published");
   } catch {
     posts = [];
+    works = [];
   }
 
   return (
     <div className="page cv">
       <Rail />
+      {writable && <NewWorkButton />}
       <PrintButton />
 
       <div className="body cv-body">
@@ -55,7 +63,7 @@ export default async function PortfolioPage() {
           </section>
         ))}
 
-        <Works works={works} />
+        {(works.length > 0 || writable) && <Works works={works} writable={writable} />}
 
         <section className="grid cv-block">
           <div>

@@ -30,3 +30,21 @@ export interface Post {
 }
 
 export type PostPatch = Partial<Pick<Post, "slug" | "title" | "body" | "tag" | "status" | "scope">>;
+
+/** 포트폴리오 작업. 본문은 글과 같은 마크다운. */
+export interface Work {
+  id: string;
+  slug: string;
+  title: string;
+  kind: string; // 브랜딩 · 제품 · 연구 …
+  role: string;
+  year: string;
+  note: string; // 목록 호버 미리보기 한두 줄
+  thumb: string; // 호버 썸네일 이미지 주소
+  body: string;
+  status: PostStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WorkPatch = Partial<Pick<Work, "slug" | "title" | "kind" | "role" | "year" | "note" | "thumb" | "body" | "status">>;

@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { Item, ItemPatch, NewItem, Post, PostPatch } from "./types";
+import type { Item, ItemPatch, NewItem, Post, PostPatch, Work, WorkPatch } from "./types";
 
 export interface Store {
   list(): Promise<Item[]>;
@@ -16,6 +16,50 @@ export interface Store {
   createPost(input?: Partial<Pick<Post, "title" | "body">>): Promise<Post>;
   updatePost(id: string, patch: PostPatch): Promise<Post | null>;
   removePost(id: string): Promise<boolean>;
+
+  listWorks(): Promise<Work[]>;
+  getWork(id: string): Promise<Work | null>;
+  getWorkBySlug(slug: string): Promise<Work | null>;
+  createWork(): Promise<Work>;
+  updateWork(id: string, patch: WorkPatch): Promise<Work | null>;
+  removeWork(id: string): Promise<boolean>;
+}
+
+type WorkRow = {
+  id: string;
+  slug: string;
+  title: string;
+  kind: string;
+  role: string;
+  year: string;
+  note: string;
+  thumb: string;
+  body: string;
+  status: string;
+  created_at: Date | string;
+  updated_at: Date | string;
+};
+
+function rowToWork(r: WorkRow): Work {
+  return {
+    id: r.id,
+    slug: r.slug,
+    title: r.title,
+    kind: r.kind,
+    role: r.role,
+    year: r.year,
+    note: r.note,
+    thumb: r.thumb,
+    body: r.body,
+    status: r.status === "published" ? "published" : "draft",
+    createdAt: new Date(r.created_at).toISOString(),
+    updatedAt: new Date(r.updated_at).toISOString(),
+  };
+}
+
+/** Newest year first, then most recently edited. */
+function sortWorks(works: Work[]): Work[] {
+  return [...works].sort((a, b) => (b.year || "").localeCompare(a.year || "") || b.updatedAt.localeCompare(a.updatedAt));
 }
 
 type PostRow = {
@@ -115,11 +159,66 @@ async function pgStore(connection: string): Promise<Store> {
         published_at timestamptz
       )`,
       )
+      .then(
+        () => sql`
+      CREATE TABLE IF NOT EXISTS works (
+        id text PRIMARY KEY,
+        slug text NOT NULL UNIQUE,
+        title text NOT NULL DEFAULT '',
+        kind text NOT NULL DEFAULT '',
+        role text NOT NULL DEFAULT '',
+        year text NOT NULL DEFAULT '',
+        note text NOT NULL DEFAULT '',
+        thumb text NOT NULL DEFAULT '',
+        body text NOT NULL DEFAULT '',
+        status text NOT NULL DEFAULT 'draft',
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      )
       .then(() => undefined);
   }
   await g.__archiveReady;
 
   return {
+    async listWorks() {
+      const rows = await sql<WorkRow[]>`SELECT * FROM works`;
+      return sortWorks(rows.map(rowToWork));
+    },
+    async getWork(id) {
+      const rows = await sql<WorkRow[]>`SELECT * FROM works WHERE id = ${id} LIMIT 1`;
+      return rows[0] ? rowToWork(rows[0]) : null;
+    },
+    async getWorkBySlug(slug) {
+      const rows = await sql<WorkRow[]>`SELECT * FROM works WHERE slug = ${slug} LIMIT 1`;
+      return rows[0] ? rowToWork(rows[0]) : null;
+    },
+    async createWork() {
+      const id = randomUUID();
+      const rows = await sql<WorkRow[]>`INSERT INTO works (id, slug, year) VALUES (${id}, ${"d-" + id.slice(0, 8)}, ${String(new Date().getFullYear())}) RETURNING *`;
+      return rowToWork(rows[0]);
+    },
+    async updateWork(id, patch) {
+      const rows = await sql<WorkRow[]>`
+        UPDATE works SET
+          slug = COALESCE(${patch.slug ?? null}, slug),
+          title = COALESCE(${patch.title ?? null}, title),
+          kind = COALESCE(${patch.kind ?? null}, kind),
+          role = COALESCE(${patch.role ?? null}, role),
+          year = COALESCE(${patch.year ?? null}, year),
+          note = COALESCE(${patch.note ?? null}, note),
+          thumb = COALESCE(${patch.thumb ?? null}, thumb),
+          body = COALESCE(${patch.body ?? null}, body),
+          status = COALESCE(${patch.status ?? null}, status),
+          updated_at = now()
+        WHERE id = ${id} RETURNING *`;
+      return rows[0] ? rowToWork(rows[0]) : null;
+    },
+    async removeWork(id) {
+      const rows = await sql`DELETE FROM works WHERE id = ${id} RETURNING id`;
+      return rows.length > 0;
+    },
+
     async listPosts() {
       const rows = await sql<PostRow[]>`SELECT * FROM posts`;
       return sortPosts(rows.map(rowToPost));
@@ -228,7 +327,68 @@ async function writePosts(posts: Post[]) {
   await fs.writeFile(POSTS_FILE, JSON.stringify(posts, null, 2), "utf8");
 }
 
+const WORKS_FILE = path.join(process.cwd(), ".data", "works.json");
+async function readWorks(): Promise<Work[]> {
+  try {
+    return JSON.parse(await fs.readFile(WORKS_FILE, "utf8")) as Work[];
+  } catch {
+    return [];
+  }
+}
+async function writeWorks(works: Work[]) {
+  await fs.mkdir(path.dirname(WORKS_FILE), { recursive: true });
+  await fs.writeFile(WORKS_FILE, JSON.stringify(works, null, 2), "utf8");
+}
+
 const fileStore: Store = {
+  listWorks: () => locked(async () => sortWorks(await readWorks())),
+  getWork: (id) => locked(async () => (await readWorks()).find((w) => w.id === id) ?? null),
+  getWorkBySlug: (slug) => locked(async () => (await readWorks()).find((w) => w.slug === slug) ?? null),
+  createWork: () =>
+    locked(async () => {
+      const works = await readWorks();
+      const id = randomUUID();
+      const now = new Date().toISOString();
+      const work: Work = {
+        id,
+        slug: "d-" + id.slice(0, 8),
+        title: "",
+        kind: "",
+        role: "",
+        year: String(new Date().getFullYear()),
+        note: "",
+        thumb: "",
+        body: "",
+        status: "draft",
+        createdAt: now,
+        updatedAt: now,
+      };
+      works.push(work);
+      await writeWorks(works);
+      return work;
+    }),
+  updateWork: (id, patch) =>
+    locked(async () => {
+      const works = await readWorks();
+      const w = works.find((x) => x.id === id);
+      if (!w) return null;
+      for (const k of ["slug", "title", "kind", "role", "year", "note", "thumb", "body", "status"] as const) {
+        const v = patch[k];
+        if (v !== undefined) (w as unknown as Record<string, string>)[k] = v;
+      }
+      w.updatedAt = new Date().toISOString();
+      await writeWorks(works);
+      return w;
+    }),
+  removeWork: (id) =>
+    locked(async () => {
+      const works = await readWorks();
+      const next = works.filter((w) => w.id !== id);
+      if (next.length === works.length) return false;
+      await writeWorks(next);
+      return true;
+    }),
+
   listPosts: () => locked(async () => sortPosts(await readPosts())),
   getPost: (id) => locked(async () => (await readPosts()).find((p) => p.id === id) ?? null),
   getPostBySlug: (slug) => locked(async () => (await readPosts()).find((p) => p.slug === slug) ?? null),

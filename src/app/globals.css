@@ -1479,3 +1479,34 @@ a.wordmark {
     right: 20px;
   }
 }
+
+/* ---------- work editor: meta rows ---------- */
+
+.editor-meta {
+  margin-top: 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+.editor-meta input {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+}
+.editor-meta.thumb-row input[type="text"],
+.editor-meta.thumb-row > input:first-child {
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+.editor-meta .pv-esc {
+  flex: none;
+  white-space: nowrap;
+}
+.editor-meta + .editor-body {
+  margin-top: 28px;
+}

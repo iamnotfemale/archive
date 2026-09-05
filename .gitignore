@@ -47,3 +47,6 @@ next-env.d.ts
 .env
 .env.*
 !.env.example
+
+# local image uploads (dev only)
+/public/uploads
