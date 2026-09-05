@@ -1573,3 +1573,45 @@ a.wordmark {
 .owner-actions > *:hover {
   color: var(--ink);
 }
+
+/* ---------- editor as a sheet over the blurred list ---------- */
+
+.editor-veil {
+  align-items: flex-start;
+  padding-top: 56px;
+  overflow-y: auto;
+}
+.editor-sheet {
+  width: 640px;
+  max-width: 100%;
+}
+.editor-sheet .editor {
+  margin: 0;
+  width: 100%;
+  height: calc(100vh - 100px);
+  height: calc(100dvh - 100px);
+  padding: 0 0 24px;
+}
+.sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 26px;
+}
+.sheet-status {
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-45);
+}
+.editor-sheet .editor-body {
+  min-height: 160px;
+}
+@media (max-width: 720px) {
+  .editor-veil {
+    padding: 24px 20px 0;
+  }
+  .editor-sheet .editor {
+    height: calc(100dvh - 48px);
+  }
+}

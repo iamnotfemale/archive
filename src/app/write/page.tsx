@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: "write" };
 
-export default async function WritePage() {
+export default async function WritePage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
+  const { edit } = await searchParams;
   const writable = await canWrite();
   let posts: Post[] = [];
   try {
@@ -17,5 +18,5 @@ export default async function WritePage() {
   } catch {
     posts = [];
   }
-  return <WriteList posts={posts} writable={writable} />;
+  return <WriteList posts={posts} writable={writable} editId={edit ?? null} />;
 }

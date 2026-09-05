@@ -1,8 +1,7 @@
 import Link from "next/link";
 import Rail from "@/components/Rail";
-import Works from "@/components/Works";
+import PortfolioWorks from "@/components/PortfolioWorks";
 import PrintButton from "@/components/PrintButton";
-import NewWorkButton from "@/components/NewWorkButton";
 import { site } from "@/content/site";
 import { cv } from "@/content/portfolio";
 import { canWrite } from "@/lib/auth";
@@ -14,7 +13,8 @@ export const dynamic = "force-dynamic";
 
 export const metadata = { title: `portfolio — ${site.name}` };
 
-export default async function PortfolioPage() {
+export default async function PortfolioPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
+  const { edit } = await searchParams;
   const writable = await canWrite();
   let posts: Post[] = [];
   let works: Work[] = [];
@@ -31,7 +31,6 @@ export default async function PortfolioPage() {
   return (
     <div className="page cv">
       <Rail />
-      {writable && <NewWorkButton />}
       <PrintButton />
 
       <div className="body cv-body">
@@ -63,7 +62,7 @@ export default async function PortfolioPage() {
           </section>
         ))}
 
-        {(works.length > 0 || writable) && <Works works={works} writable={writable} />}
+        <PortfolioWorks works={works} writable={writable} editId={edit ?? null} />
 
         <section className="grid cv-block">
           <div>

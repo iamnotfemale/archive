@@ -57,7 +57,7 @@ export default async function PostPage({ params }: Props) {
               <span>{fullDate(when)}</span>
               {post.status === "draft" && <span>초안</span>}
               {post.status === "published" && post.scope === "unlisted" && <span>링크 있는 사람만</span>}
-              {writable && <OwnerActions editHref={`/write/edit/${post.id}`} deleteUrl={`/api/posts/${post.id}`} afterDelete="/write" />}
+              {writable && <OwnerActions editHref={`/write?edit=${post.id}`} deleteUrl={`/api/posts/${post.id}`} afterDelete="/write" />}
             </div>
             <div className="post-body">{renderBody(post.body)}</div>
             {next && (

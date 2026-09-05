@@ -54,7 +54,7 @@ export default async function WorkPage({ params }: Props) {
               {w.role && <span>{w.role}</span>}
               {w.year && <span>{w.year}</span>}
               {w.status === "draft" && <span>초안</span>}
-              {writable && <OwnerActions editHref={`/portfolio/edit/${w.id}`} deleteUrl={`/api/works/${w.id}`} afterDelete="/portfolio" />}
+              {writable && <OwnerActions editHref={`/portfolio?edit=${w.id}`} deleteUrl={`/api/works/${w.id}`} afterDelete="/portfolio" />}
             </div>
             <div className="post-body">{renderBody(w.body)}</div>
             {next && next.id !== w.id && (

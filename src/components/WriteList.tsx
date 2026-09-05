@@ -6,24 +6,27 @@ import type { Post } from "@/lib/types";
 import { dayLabel, monthKey, monthLabel } from "@/lib/format";
 import { excerpt } from "@/lib/markdown";
 import Rail from "./Rail";
+import EditorSheet from "./EditorSheet";
 
 const ALL = "전체";
 const ROW_MAX = 60;
 const INK = "#1F1D1A";
 const INK_45 = "rgba(31,29,26,.45)";
 
-type Props = { posts: Post[]; writable: boolean };
+type Props = { posts: Post[]; writable: boolean; editId?: string | null };
 
 const when = (p: Post) => p.publishedAt ?? p.updatedAt;
 
-export default function WriteList({ posts, writable }: Props) {
+export default function WriteList({ posts: initial, writable, editId = null }: Props) {
   const router = useRouter();
+  const [posts, setPosts] = useState(initial);
   const [filter, setFilter] = useState(ALL);
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
   const [slashHover, setSlashHover] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState("");
+  const [editing, setEditing] = useState<Post | null>(() => (writable && editId ? initial.find((p) => p.id === editId) ?? null : null));
   const searchInput = useRef<HTMLInputElement>(null);
 
   const tags = useMemo(() => {
@@ -48,7 +51,7 @@ export default function WriteList({ posts, writable }: Props) {
   const visible = (p: Post) => {
     if (filter !== ALL && p.tag !== filter) return false;
     if (!ql) return true;
-    return [p.title, p.tag, excerpt(p.body, 400)].some((s) => s.toLowerCase().includes(ql));
+    return [p.title, p.subtitle, p.tag, excerpt(p.body, 400)].some((s) => s.toLowerCase().includes(ql));
   };
   const matchCount = ql ? posts.filter(visible).length : null;
 
@@ -65,6 +68,22 @@ export default function WriteList({ posts, writable }: Props) {
     setQ("");
   };
 
+  /* ---------- editor overlay ---------- */
+  const openEditor = (p: Post) => {
+    setEditing(p);
+    window.history.replaceState(null, "", `/write?edit=${p.id}`);
+  };
+  const closeEditor = () => {
+    setEditing(null);
+    window.history.replaceState(null, "", "/write");
+  };
+  useEffect(() => {
+    document.body.style.overflow = editing ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [editing]);
+
   const newDraft = async () => {
     if (busy) return;
     setBusy(true);
@@ -72,18 +91,25 @@ export default function WriteList({ posts, writable }: Props) {
       const res = await fetch("/api/posts", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
       if (!res.ok) throw new Error(String(res.status));
       const { post } = (await res.json()) as { post: Post };
-      document.querySelector(".page")?.classList.add("leaving"); // fade out, the editor rises in
-      setTimeout(() => router.push(`/write/edit/${post.id}`), 260);
+      setPosts((prev) => [post, ...prev]);
+      openEditor(post);
     } catch {
-      setBusy(false);
       setNote("잠시 뒤에 다시 시도해 주세요");
       setTimeout(() => setNote(""), 3000);
+    } finally {
+      setBusy(false);
     }
+  };
+  const onChange = (p: Post) => setPosts((prev) => prev.map((x) => (x.id === p.id ? p : x)));
+  const onDelete = (id: string) => {
+    setPosts((prev) => prev.filter((x) => x.id !== id));
+    closeEditor();
   };
 
   const keyRef = useRef((e: KeyboardEvent) => void e);
   useEffect(() => {
     keyRef.current = (e: KeyboardEvent) => {
+      if (editing) return; // the sheet owns the keyboard
       const t = e.target as HTMLElement | null;
       const inInput = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA");
       if (e.key === "Escape" && searchOpen) {
@@ -109,7 +135,7 @@ export default function WriteList({ posts, writable }: Props) {
 
   const open = (p: Post) => {
     if (p.status === "draft") {
-      if (writable) router.push(`/write/edit/${p.id}`);
+      if (writable) openEditor(p);
     } else router.push(`/write/${p.slug}`);
   };
 
@@ -130,7 +156,7 @@ export default function WriteList({ posts, writable }: Props) {
       </Rail>
 
       {writable && (
-        <div className="corner plus" title="새 글" style={{ color: busy ? INK_45 : INK }} onClick={() => void newDraft()}>
+        <div className="corner plus" title="새 글" style={{ transform: editing ? "rotate(45deg)" : "none", color: busy || editing ? INK_45 : INK }} onClick={() => (editing ? closeEditor() : void newDraft())}>
           +
         </div>
       )}
@@ -196,6 +222,17 @@ export default function WriteList({ posts, writable }: Props) {
           <div className="empty-state-h">아직 아무 글도 없습니다.</div>
         </div>
       )}
+
+      {/* editor rises over the blurred list */}
+      <div
+        className={`veil editor-veil${editing ? " open" : ""}`}
+        inert={!editing}
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) closeEditor();
+        }}
+      >
+        <div className="sheet editor-sheet">{editing && <EditorSheet key={editing.id} post={editing} tags={tags} onChange={onChange} onClose={closeEditor} onDelete={onDelete} />}</div>
+      </div>
     </div>
   );
 }
