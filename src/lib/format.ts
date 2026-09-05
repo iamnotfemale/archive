@@ -22,6 +22,12 @@ export function dayLabel(iso: string): string {
   return `${m}. ${String(d).padStart(2, "0")}`;
 }
 
+/** "2026. 8. 28" — 읽기 화면의 날짜 표기 */
+export function fullDate(iso: string): string {
+  const { y, m, d } = ymd(iso);
+  return `${y}. ${m}. ${d}`;
+}
+
 export function shortUrl(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "");
 }

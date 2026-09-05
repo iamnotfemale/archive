@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { Item, ItemPatch, NewItem } from "./types";
+import type { Item, ItemPatch, NewItem, Post, PostPatch } from "./types";
 
 export interface Store {
   list(): Promise<Item[]>;
@@ -9,6 +9,47 @@ export interface Store {
   create(input: NewItem): Promise<Item>;
   update(id: string, patch: ItemPatch): Promise<Item | null>;
   remove(id: string): Promise<boolean>;
+
+  listPosts(): Promise<Post[]>;
+  getPost(id: string): Promise<Post | null>;
+  getPostBySlug(slug: string): Promise<Post | null>;
+  createPost(input?: Partial<Pick<Post, "title" | "body">>): Promise<Post>;
+  updatePost(id: string, patch: PostPatch): Promise<Post | null>;
+  removePost(id: string): Promise<boolean>;
+}
+
+type PostRow = {
+  id: string;
+  slug: string;
+  title: string;
+  body: string;
+  tag: string;
+  status: string;
+  scope: string;
+  created_at: Date | string;
+  updated_at: Date | string;
+  published_at: Date | string | null;
+};
+
+function rowToPost(r: PostRow): Post {
+  return {
+    id: r.id,
+    slug: r.slug,
+    title: r.title,
+    body: r.body,
+    tag: r.tag,
+    status: r.status === "published" ? "published" : "draft",
+    scope: r.scope === "unlisted" ? "unlisted" : "public",
+    createdAt: new Date(r.created_at).toISOString(),
+    updatedAt: new Date(r.updated_at).toISOString(),
+    publishedAt: r.published_at ? new Date(r.published_at).toISOString() : null,
+  };
+}
+
+/** Newest first: published posts by publish date, drafts by last edit. */
+function sortPosts(posts: Post[]): Post[] {
+  const key = (p: Post) => p.publishedAt ?? p.updatedAt;
+  return [...posts].sort((a, b) => key(b).localeCompare(key(a)));
 }
 
 /* ---------- Postgres (production) ---------- */
@@ -58,11 +99,68 @@ async function pgStore(connection: string): Promise<Store> {
         memo text NOT NULL DEFAULT '',
         tag text NOT NULL DEFAULT '',
         created_at timestamptz NOT NULL DEFAULT now()
-      )`.then(() => undefined);
+      )`
+      .then(
+        () => sql`
+      CREATE TABLE IF NOT EXISTS posts (
+        id text PRIMARY KEY,
+        slug text NOT NULL UNIQUE,
+        title text NOT NULL DEFAULT '',
+        body text NOT NULL DEFAULT '',
+        tag text NOT NULL DEFAULT '',
+        status text NOT NULL DEFAULT 'draft',
+        scope text NOT NULL DEFAULT 'public',
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        published_at timestamptz
+      )`,
+      )
+      .then(() => undefined);
   }
   await g.__archiveReady;
 
   return {
+    async listPosts() {
+      const rows = await sql<PostRow[]>`SELECT * FROM posts`;
+      return sortPosts(rows.map(rowToPost));
+    },
+    async getPost(id) {
+      const rows = await sql<PostRow[]>`SELECT * FROM posts WHERE id = ${id} LIMIT 1`;
+      return rows[0] ? rowToPost(rows[0]) : null;
+    },
+    async getPostBySlug(slug) {
+      const rows = await sql<PostRow[]>`SELECT * FROM posts WHERE slug = ${slug} LIMIT 1`;
+      return rows[0] ? rowToPost(rows[0]) : null;
+    },
+    async createPost(input = {}) {
+      const id = randomUUID();
+      const slug = "d-" + id.slice(0, 8); // draft slug; replaced when publishing
+      const rows = await sql<PostRow[]>`
+        INSERT INTO posts (id, slug, title, body) VALUES (${id}, ${slug}, ${input.title ?? ""}, ${input.body ?? ""}) RETURNING *`;
+      return rowToPost(rows[0]);
+    },
+    async updatePost(id, patch) {
+      const rows = await sql<PostRow[]>`
+        UPDATE posts SET
+          slug = COALESCE(${patch.slug ?? null}, slug),
+          title = COALESCE(${patch.title ?? null}, title),
+          body = COALESCE(${patch.body ?? null}, body),
+          tag = COALESCE(${patch.tag ?? null}, tag),
+          status = COALESCE(${patch.status ?? null}, status),
+          scope = COALESCE(${patch.scope ?? null}, scope),
+          updated_at = now(),
+          published_at = CASE
+            WHEN ${patch.status ?? null} = 'published' AND published_at IS NULL THEN now()
+            WHEN ${patch.status ?? null} = 'draft' THEN NULL
+            ELSE published_at END
+        WHERE id = ${id} RETURNING *`;
+      return rows[0] ? rowToPost(rows[0]) : null;
+    },
+    async removePost(id) {
+      const rows = await sql`DELETE FROM posts WHERE id = ${id} RETURNING id`;
+      return rows.length > 0;
+    },
+
     async list() {
       const rows = await sql<Row[]>`SELECT * FROM items ORDER BY created_at DESC`;
       return rows.map(rowToItem);
@@ -117,7 +215,72 @@ function locked<T>(fn: () => Promise<T>): Promise<T> {
   return next;
 }
 
+const POSTS_FILE = path.join(process.cwd(), ".data", "posts.json");
+async function readPosts(): Promise<Post[]> {
+  try {
+    return JSON.parse(await fs.readFile(POSTS_FILE, "utf8")) as Post[];
+  } catch {
+    return [];
+  }
+}
+async function writePosts(posts: Post[]) {
+  await fs.mkdir(path.dirname(POSTS_FILE), { recursive: true });
+  await fs.writeFile(POSTS_FILE, JSON.stringify(posts, null, 2), "utf8");
+}
+
 const fileStore: Store = {
+  listPosts: () => locked(async () => sortPosts(await readPosts())),
+  getPost: (id) => locked(async () => (await readPosts()).find((p) => p.id === id) ?? null),
+  getPostBySlug: (slug) => locked(async () => (await readPosts()).find((p) => p.slug === slug) ?? null),
+  createPost: (input = {}) =>
+    locked(async () => {
+      const posts = await readPosts();
+      const id = randomUUID();
+      const now = new Date().toISOString();
+      const post: Post = {
+        id,
+        slug: "d-" + id.slice(0, 8),
+        title: input.title ?? "",
+        body: input.body ?? "",
+        tag: "",
+        status: "draft",
+        scope: "public",
+        createdAt: now,
+        updatedAt: now,
+        publishedAt: null,
+      };
+      posts.push(post);
+      await writePosts(posts);
+      return post;
+    }),
+  updatePost: (id, patch) =>
+    locked(async () => {
+      const posts = await readPosts();
+      const p = posts.find((x) => x.id === id);
+      if (!p) return null;
+      if (patch.slug !== undefined) p.slug = patch.slug;
+      if (patch.title !== undefined) p.title = patch.title;
+      if (patch.body !== undefined) p.body = patch.body;
+      if (patch.tag !== undefined) p.tag = patch.tag;
+      if (patch.scope !== undefined) p.scope = patch.scope;
+      if (patch.status !== undefined) {
+        if (patch.status === "published" && !p.publishedAt) p.publishedAt = new Date().toISOString();
+        if (patch.status === "draft") p.publishedAt = null;
+        p.status = patch.status;
+      }
+      p.updatedAt = new Date().toISOString();
+      await writePosts(posts);
+      return p;
+    }),
+  removePost: (id) =>
+    locked(async () => {
+      const posts = await readPosts();
+      const next = posts.filter((p) => p.id !== id);
+      if (next.length === posts.length) return false;
+      await writePosts(next);
+      return true;
+    }),
+
   list: () => locked(async () => (await readFile()).sort((a, b) => b.createdAt.localeCompare(a.createdAt))),
   findByUrl: (url) => locked(async () => (await readFile()).find((i) => i.url === url) ?? null),
   create: (input) =>

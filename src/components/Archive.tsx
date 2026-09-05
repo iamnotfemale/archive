@@ -6,6 +6,7 @@ import { extractUrls } from "@/lib/url";
 import { dayLabel, monthKey, monthLabel, shortUrl } from "@/lib/format";
 import { distinctTags } from "@/lib/tags";
 import TagSuggest from "./TagSuggest";
+import Rail from "./Rail";
 
 const ALL = "전체";
 const UNSORTED = "__unsorted";
@@ -329,8 +330,7 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
   return (
     <div className="page" ref={pageRef}>
       {/* left margin */}
-      <div className="side">
-        <div className="wordmark">archive</div>
+      <Rail>
         <div
           className={`side-note${unsorted > 0 && !empty ? " clickable" : ""}${filter === UNSORTED ? " active" : ""}`}
           onClick={() => unsorted > 0 && setFilter((f) => (f === UNSORTED ? ALL : UNSORTED))}
@@ -359,7 +359,7 @@ export default function Archive({ initialItems, locked, dbError = null }: Props)
             ))}
           </div>
         )}
-      </div>
+      </Rail>
 
       {/* corners */}
       {!isLocked && (

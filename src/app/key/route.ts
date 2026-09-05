@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const u = new URL(req.url);
   const t = u.searchParams.get("t") ?? "";
-  const res = NextResponse.redirect(new URL("/", u.origin));
+  const res = NextResponse.redirect(new URL("/archive", u.origin));
   if (t) {
     res.cookies.set(KEY_COOKIE, t, {
       httpOnly: true,
