@@ -66,6 +66,7 @@ type PostRow = {
   id: string;
   slug: string;
   title: string;
+  subtitle: string | null;
   body: string;
   tag: string;
   status: string;
@@ -80,6 +81,7 @@ function rowToPost(r: PostRow): Post {
     id: r.id,
     slug: r.slug,
     title: r.title,
+    subtitle: r.subtitle ?? "",
     body: r.body,
     tag: r.tag,
     status: r.status === "published" ? "published" : "draft",
@@ -159,6 +161,7 @@ async function pgStore(connection: string): Promise<Store> {
         published_at timestamptz
       )`,
       )
+      .then(() => sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS subtitle text NOT NULL DEFAULT ''`)
       .then(
         () => sql`
       CREATE TABLE IF NOT EXISTS works (
@@ -243,6 +246,7 @@ async function pgStore(connection: string): Promise<Store> {
         UPDATE posts SET
           slug = COALESCE(${patch.slug ?? null}, slug),
           title = COALESCE(${patch.title ?? null}, title),
+          subtitle = COALESCE(${patch.subtitle ?? null}, subtitle),
           body = COALESCE(${patch.body ?? null}, body),
           tag = COALESCE(${patch.tag ?? null}, tag),
           status = COALESCE(${patch.status ?? null}, status),
@@ -401,6 +405,7 @@ const fileStore: Store = {
         id,
         slug: "d-" + id.slice(0, 8),
         title: input.title ?? "",
+        subtitle: "",
         body: input.body ?? "",
         tag: "",
         status: "draft",
@@ -420,6 +425,7 @@ const fileStore: Store = {
       if (!p) return null;
       if (patch.slug !== undefined) p.slug = patch.slug;
       if (patch.title !== undefined) p.title = patch.title;
+      if (patch.subtitle !== undefined) p.subtitle = patch.subtitle;
       if (patch.body !== undefined) p.body = patch.body;
       if (patch.tag !== undefined) p.tag = patch.tag;
       if (patch.scope !== undefined) p.scope = patch.scope;

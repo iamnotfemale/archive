@@ -105,6 +105,11 @@ export function excerpt(body: string, max = 120): string {
   return plain.length > max ? plain.slice(0, max).trimEnd() + "…" : plain;
 }
 
+/** 본문의 첫 이미지 주소 (썸네일 대용). */
+export function firstImage(body: string): string {
+  return body.match(/!\[[^\]]*\]\(([^)\s]+)\)/)?.[1] ?? "";
+}
+
 /** 제목에서 URL용 slug. 라틴 글자가 없으면(한글 제목) 짧은 무작위 id. */
 export function slugify(title: string): string {
   const s = title

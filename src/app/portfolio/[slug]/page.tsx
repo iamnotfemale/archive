@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Rail from "@/components/Rail";
+import OwnerActions from "@/components/OwnerActions";
 import { site } from "@/content/site";
 import { canWrite } from "@/lib/auth";
 import { getStore } from "@/lib/store";
@@ -15,7 +16,7 @@ export async function generateMetadata({ params }: Props) {
   try {
     const store = await getStore();
     const w = await store.getWorkBySlug(slug);
-    return w && w.status === "published" ? { title: `${w.title} — ${site.name}`, description: excerpt(w.body) } : { title: site.name };
+    return w && w.status === "published" ? { title: `${w.title} — ${site.name}`, description: w.note || excerpt(w.body) } : { title: site.name };
   } catch {
     return { title: site.name };
   }
@@ -38,11 +39,6 @@ export default async function WorkPage({ params }: Props) {
         <Link href="/portfolio" className="side-sub rail-link">
           ← 작업 목록
         </Link>
-        {writable && (
-          <Link href={`/portfolio/edit/${w.id}`} className="side-sub rail-link">
-            수정
-          </Link>
-        )}
       </Rail>
 
       <div className="body">
@@ -52,11 +48,13 @@ export default async function WorkPage({ params }: Props) {
           </div>
           <article className="post work">
             <h1 className="post-title">{w.title || "제목 없음"}</h1>
+            {w.note && <div className="post-subtitle">{w.note}</div>}
             <div className="post-meta">
               {w.kind && <span>{w.kind}</span>}
               {w.role && <span>{w.role}</span>}
               {w.year && <span>{w.year}</span>}
               {w.status === "draft" && <span>초안</span>}
+              {writable && <OwnerActions editHref={`/portfolio/edit/${w.id}`} deleteUrl={`/api/works/${w.id}`} afterDelete="/portfolio" />}
             </div>
             <div className="post-body">{renderBody(w.body)}</div>
             {next && next.id !== w.id && (

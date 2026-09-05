@@ -11,27 +11,30 @@ type Props = { work: Work; all: Work[] };
 
 const INK = "#1F1D1A";
 const DIM = "rgba(31,29,26,.42)";
-const FIELDS = ["title", "kind", "role", "year", "note", "thumb", "body"] as const;
+const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/;
+const FIELDS = ["title", "note", "year", "body"] as const; // note = 부제목
 type Field = (typeof FIELDS)[number];
 type Draft = Pick<Work, Field>;
 
 export default function WorkEditor({ work, all }: Props) {
   const router = useRouter();
-  const [d, setD] = useState<Draft>({ title: work.title, kind: work.kind, role: work.role, year: work.year, note: work.note, thumb: work.thumb, body: work.body });
-  const [slug, setSlug] = useState(work.slug);
+  const [d, setD] = useState<Draft>({ title: work.title, note: work.note, year: work.year, body: work.body });
+  const [slug, setSlug] = useState(/^d-[0-9a-f]{8}$/.test(work.slug) ? slugify(work.title) : work.slug);
   const [status, setStatus] = useState(work.status);
   const [stage, setStage] = useState<0 | 1 | 2 | 3>(0);
   const [save, setSave] = useState<"saved" | "dirty" | "saving" | "failed">("saved");
   const [note, setNote] = useState("");
   const [confirmDel, setConfirmDel] = useState(false);
-  const [uploading, setUploading] = useState<"" | "body" | "thumb">("");
+  const [uploading, setUploading] = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const subtitleRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const thumbFileRef = useRef<HTMLInputElement>(null);
+  const slugTouched = useRef(!/^d-[0-9a-f]{8}$/.test(work.slug));
   const lastSaved = useRef<Draft>({ ...d });
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const set = (k: Field) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setD((p) => ({ ...p, [k]: e.target.value }));
+  const changed = (x: Draft) => FIELDS.some((k) => x[k] !== lastSaved.current[k]);
 
   const patch = useCallback(
     async (data: Record<string, unknown>) => {
@@ -66,74 +69,72 @@ export default function WorkEditor({ work, all }: Props) {
     return () => clearTimeout(timer.current);
   }, [d, flush]);
 
+  const onTitle = (v: string) => {
+    setD((p) => ({ ...p, title: v }));
+    if (!slugTouched.current && status === "draft" && /[a-z]/i.test(v)) setSlug(slugify(v));
+  };
+
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
-      if (FIELDS.some((k) => d[k] !== lastSaved.current[k])) e.preventDefault();
+      if (changed(d)) e.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [d]);
+  });
+
+  const saveSlug = async () => {
+    const s = slug.trim().toLowerCase();
+    if (!s || s === work.slug) return;
+    if (!SLUG_RE.test(s)) {
+      setNote("주소는 영문 소문자·숫자·하이픈만");
+      return;
+    }
+    try {
+      await patch({ slug: s });
+      setSlug(s);
+      setNote("");
+    } catch (e) {
+      setNote(e instanceof Error && e.message === "slug_taken" ? "이미 쓰는 주소입니다" : "주소를 저장하지 못했습니다");
+    }
+  };
 
   /* ---------- images ---------- */
-  const upload = async (file: File): Promise<string> => {
-    const fd = new FormData();
-    fd.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
-    const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-    if (!res.ok || !json.url) throw new Error(json.error ?? String(res.status));
-    return json.url;
-  };
   const uploadFail = (e: unknown) => {
     const code = e instanceof Error ? e.message : "";
-    setNote(
-      code === "no_blob"
-        ? "이미지 저장소가 아직 없습니다 · Vercel Storage 에서 Blob 을 연결하세요"
-        : code === "too_large"
-          ? "12MB 이하 이미지만"
-          : code === "bad_type"
-            ? "jpg · png · webp · gif · avif · svg 만"
-            : "이미지를 올리지 못했습니다",
-    );
+    setNote(code === "no_blob" ? "이미지 저장소가 아직 없습니다" : code === "too_large" ? "12MB 이하 이미지만" : code === "bad_type" ? "jpg · png · webp · gif · avif · svg 만" : "이미지를 올리지 못했습니다");
     setTimeout(() => setNote(""), 5000);
   };
   const insertImage = async (file: File) => {
-    setUploading("body");
+    setUploading(true);
     try {
-      const url = await upload(file);
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !json.url) throw new Error(json.error ?? String(res.status));
       const ta = bodyRef.current;
       const pos = ta ? ta.selectionStart : d.body.length;
       const before = d.body.slice(0, pos);
       const after = d.body.slice(pos);
-      const snippet = `${before && !before.endsWith("\n\n") ? (before.endsWith("\n") ? "\n" : "\n\n") : ""}![](${url})\n\n`;
+      const lead = before && !before.endsWith("\n\n") ? (before.endsWith("\n") ? "\n" : "\n\n") : "";
+      const snippet = `${lead}![](${json.url})\n\n`;
       setD((p) => ({ ...p, body: before + snippet + after }));
       setTimeout(() => {
         if (!ta) return;
-        const at = before.length + snippet.length - 2;
+        const at = before.length + lead.length + 2;
         ta.focus();
         ta.setSelectionRange(at, at);
       }, 0);
     } catch (e) {
       uploadFail(e);
     } finally {
-      setUploading("");
-    }
-  };
-  const setThumbFile = async (file: File) => {
-    setUploading("thumb");
-    try {
-      const url = await upload(file);
-      setD((p) => ({ ...p, thumb: url }));
-    } catch (e) {
-      uploadFail(e);
-    } finally {
-      setUploading("");
+      setUploading(false);
     }
   };
 
   /* ---------- publish ---------- */
   const openPanel = () => {
     if (stage !== 0) return;
-    if (status === "draft" && /^d-[0-9a-f]{8}$/.test(slug)) setSlug(slugify(d.title));
     setStage(1);
     setNote("");
   };
@@ -145,7 +146,7 @@ export default function WorkEditor({ work, all }: Props) {
   const publish = async () => {
     if (stage !== 1) return;
     const s = slug.trim().toLowerCase();
-    if (!/^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/.test(s)) {
+    if (!SLUG_RE.test(s)) {
       setNote("주소는 영문 소문자·숫자·하이픈만");
       return;
     }
@@ -179,7 +180,8 @@ export default function WorkEditor({ work, all }: Props) {
     try {
       await fetch(`/api/works/${work.id}`, { method: "DELETE" });
       lastSaved.current = { ...d };
-      router.push("/portfolio");
+      document.querySelector(".page")?.classList.add("leaving");
+      setTimeout(() => router.push("/portfolio"), 260);
     } catch {
       setNote("잠시 뒤에 다시 시도해 주세요");
     }
@@ -236,28 +238,31 @@ export default function WorkEditor({ work, all }: Props) {
       </div>
 
       <div className="editor">
-        <input className="editor-title" value={d.title} onChange={set("title")} placeholder="작업 제목" spellCheck={false} />
-        <div className="editor-meta">
-          <input value={d.kind} onChange={set("kind")} placeholder="종류 (브랜딩, 제품, 연구…)" />
-          <input value={d.role} onChange={set("role")} placeholder="역할" />
-          <input value={d.year} onChange={set("year")} placeholder="연도" style={{ width: "6ch", flex: "none" }} />
-        </div>
-        <div className="editor-meta">
-          <input value={d.note} onChange={set("note")} placeholder="목록에서 마우스를 올리면 보이는 한두 줄" />
-        </div>
-        <div className="editor-meta thumb-row">
-          <input value={d.thumb} onChange={set("thumb")} placeholder="썸네일 이미지 주소 (비워도 됩니다)" spellCheck={false} />
-          <span className="pv-esc" onClick={() => thumbFileRef.current?.click()}>
-            {uploading === "thumb" ? "올리는 중" : "썸네일 올리기"}
-          </span>
-          <input ref={thumbFileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && void setThumbFile(e.target.files[0])} />
+        <input className="editor-title" value={d.title} onChange={(e) => onTitle(e.target.value)} placeholder="제목" spellCheck={false} onKeyDown={(e) => e.key === "Enter" && subtitleRef.current?.focus()} />
+        <input ref={subtitleRef} className="editor-subtitle" value={d.note} onChange={set("note")} placeholder="부제목" spellCheck={false} onKeyDown={(e) => e.key === "Enter" && bodyRef.current?.focus()} />
+        <div className="editor-meta slug">
+          <span>/portfolio/</span>
+          <input
+            value={slug}
+            onChange={(e) => {
+              slugTouched.current = true;
+              setSlug(e.target.value);
+            }}
+            onBlur={() => void saveSlug()}
+            placeholder="주소"
+            spellCheck={false}
+            style={{ width: Math.max(4, slug.length) + "ch" }}
+          />
+          <span style={{ flex: 1 }} />
+          <input value={d.year} onChange={set("year")} placeholder="연도" spellCheck={false} style={{ width: "5ch", flex: "none", textAlign: "right" }} />
+          {note && <span className="editor-note">{note}</span>}
         </div>
         <textarea
           ref={bodyRef}
           className="editor-body"
           value={d.body}
           onChange={set("body")}
-          placeholder={"작업 설명을 쓰세요. 빈 줄로 문단을 나누고, ## 소제목, ![캡션](이미지주소) 를 쓸 수 있습니다."}
+          placeholder="본문"
           spellCheck={false}
           onPaste={(e) => {
             const f = [...(e.clipboardData?.files ?? [])].find((x) => x.type.startsWith("image/"));
@@ -268,35 +273,28 @@ export default function WorkEditor({ work, all }: Props) {
           }}
         />
 
-        <div className="pub" style={{ maxHeight: stage === 0 ? 0 : stage === 3 ? 110 : 300, opacity: open ? 1 : 0, filter: stage === 2 ? "blur(2px)" : "blur(0)" }} inert={!open}>
+        <div className="pub" style={{ maxHeight: stage === 0 ? 0 : stage === 3 ? 110 : 200, opacity: open ? 1 : 0, filter: stage === 2 ? "blur(2px)" : "blur(0)" }} inert={!open}>
           <div className="pub-inner">
             {(stage === 1 || stage === 2) && (
-              <>
-                <div className="pub-row" style={{ marginTop: 0 }}>
-                  <span className="pub-slug">
-                    /portfolio/
-                    <input value={slug} onChange={(e) => setSlug(e.target.value)} spellCheck={false} style={{ width: Math.max(6, slug.length) + "ch" }} />
+              <div className="pub-foot" style={{ marginTop: 0 }}>
+                <span style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                  <span className="pv-esc" onClick={closePanel}>
+                    Esc 로 닫기
                   </span>
-                </div>
-                <div className="pub-foot">
-                  <span style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                    <span className="pv-esc" onClick={closePanel}>
-                      Esc 로 닫기
+                  <span className="pv-esc" onClick={() => void remove()} style={{ color: confirmDel ? INK : undefined }}>
+                    {confirmDel ? "정말 지우기" : "지우기"}
+                  </span>
+                  {status === "published" && (
+                    <span className="pv-esc" onClick={() => void unpublish()}>
+                      초안으로
                     </span>
-                    <span className="pv-esc" onClick={() => void remove()} style={{ color: confirmDel ? INK : undefined }}>
-                      {confirmDel ? "정말 지우기" : "지우기"}
-                    </span>
-                    {status === "published" && (
-                      <span className="pv-esc" onClick={() => void unpublish()}>
-                        초안으로
-                      </span>
-                    )}
-                  </span>
-                  <span className="pub-go" onClick={() => void publish()}>
-                    {status === "published" ? "다시 발행하기" : "발행하기"}
-                  </span>
-                </div>
-              </>
+                  )}
+                  <span className="pub-slug">/portfolio/{slug}</span>
+                </span>
+                <span className="pub-go" onClick={() => void publish()}>
+                  {status === "published" ? "다시 발행하기" : "발행하기"}
+                </span>
+              </div>
             )}
             {stage === 3 && (
               <div className="pub-done">
@@ -312,11 +310,11 @@ export default function WorkEditor({ work, all }: Props) {
         <div className="editor-bar">
           <span style={{ display: "flex", gap: 16, alignItems: "baseline", flexWrap: "wrap" }}>
             <span className="pv-esc" onClick={() => fileRef.current?.click()}>
-              {uploading === "body" ? "올리는 중" : "이미지 넣기"}
+              {uploading ? "올리는 중" : "이미지"}
             </span>
             <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && void insertImage(e.target.files[0])} />
-            <span className="pv-esc" style={{ cursor: "default", color: note ? INK : undefined }}>
-              {note || (status === "published" ? "발행됨" : "초안")}
+            <span className="pv-esc" style={{ cursor: "default" }}>
+              {status === "published" ? "발행됨" : "초안"}
             </span>
           </span>
           <span className="pub-btn" style={{ color: open ? DIM : INK }} onClick={openPanel}>

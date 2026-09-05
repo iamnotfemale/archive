@@ -16,6 +16,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
 
   const patch: PostPatch = {};
   if (body.title !== undefined) patch.title = String(body.title).slice(0, 200);
+  if (body.subtitle !== undefined) patch.subtitle = String(body.subtitle).slice(0, 300);
   if (body.body !== undefined) patch.body = String(body.body);
   if (body.tag !== undefined) patch.tag = String(body.tag).trim().slice(0, 40);
   if (body.status === "draft" || body.status === "published") patch.status = body.status;

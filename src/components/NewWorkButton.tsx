@@ -15,7 +15,8 @@ export default function NewWorkButton() {
       const res = await fetch("/api/works", { method: "POST" });
       if (!res.ok) throw new Error(String(res.status));
       const { work } = (await res.json()) as { work: Work };
-      router.push(`/portfolio/edit/${work.id}`);
+      document.querySelector(".page")?.classList.add("leaving"); // fade out, the editor rises in
+      setTimeout(() => router.push(`/portfolio/edit/${work.id}`), 260);
     } catch {
       setBusy(false);
     }

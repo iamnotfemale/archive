@@ -72,7 +72,8 @@ export default function WriteList({ posts, writable }: Props) {
       const res = await fetch("/api/posts", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
       if (!res.ok) throw new Error(String(res.status));
       const { post } = (await res.json()) as { post: Post };
-      router.push(`/write/edit/${post.id}`);
+      document.querySelector(".page")?.classList.add("leaving"); // fade out, the editor rises in
+      setTimeout(() => router.push(`/write/edit/${post.id}`), 260);
     } catch {
       setBusy(false);
       setNote("잠시 뒤에 다시 시도해 주세요");

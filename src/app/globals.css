@@ -1510,3 +1510,66 @@ a.wordmark {
 .editor-meta + .editor-body {
   margin-top: 28px;
 }
+
+/* ---------- soft page hand-off (+ → editor), subtitle, owner actions ---------- */
+
+.page {
+  transition: opacity 0.28s var(--ease);
+}
+.page.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+.editor-page .editor,
+.editor-page .side,
+.editor-page .editor-status {
+  animation: rise 0.55s var(--ease) both;
+}
+.editor-subtitle {
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: -0.003em;
+  color: var(--ink-60);
+}
+.editor-meta.slug {
+  margin-top: 18px;
+  gap: 0;
+  align-items: baseline;
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--ink-42);
+}
+.editor-meta.slug input {
+  flex: 0 1 auto;
+  min-width: 4ch;
+  font: inherit;
+  color: var(--ink);
+}
+.editor-note {
+  margin-left: 16px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.post-subtitle {
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink-60);
+  text-wrap: pretty;
+}
+.owner-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 14px;
+}
+.owner-actions > * {
+  cursor: pointer;
+  color: var(--ink-42);
+  transition: color 0.25s var(--ease);
+  user-select: none;
+}
+.owner-actions > *:hover {
+  color: var(--ink);
+}

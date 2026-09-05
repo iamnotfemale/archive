@@ -12,6 +12,7 @@ type Props = { post: Post; drafts: Post[]; tags: string[] };
 
 const INK = "#1F1D1A";
 const DIM = "rgba(31,29,26,.42)";
+const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/;
 
 function ago(iso: string): string {
   const d = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -25,63 +26,91 @@ function ago(iso: string): string {
 export default function Editor({ post, drafts, tags }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState(post.title);
+  const [subtitle, setSubtitle] = useState(post.subtitle);
   const [body, setBody] = useState(post.body);
   const [tag, setTag] = useState(post.tag);
   const [tagF, setTagF] = useState(false);
   const [scope, setScope] = useState<PostScope>(post.scope);
-  const [slug, setSlug] = useState(post.slug);
+  const [slug, setSlug] = useState(/^d-[0-9a-f]{8}$/.test(post.slug) ? slugify(post.title) : post.slug);
   const [status, setStatus] = useState(post.status);
   const [stage, setStage] = useState<0 | 1 | 2 | 3>(0); // 0 closed · 1 form · 2 ink · 3 done
   const [save, setSave] = useState<"saved" | "dirty" | "saving" | "failed">("saved");
   const [note, setNote] = useState("");
   const [confirmDel, setConfirmDel] = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
-  const lastSaved = useRef({ title: post.title, body: post.body });
+  const subtitleRef = useRef<HTMLInputElement>(null);
+  const slugTouched = useRef(!/^d-[0-9a-f]{8}$/.test(post.slug));
+  const lastSaved = useRef({ title: post.title, subtitle: post.subtitle, body: post.body });
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const patch = useCallback(async (data: Record<string, unknown>) => {
-    const res = await fetch(`/api/posts/${post.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(data) });
-    if (!res.ok) {
-      const err = (await res.json().catch(() => ({}))) as { error?: string };
-      throw new Error(err.error ?? String(res.status));
-    }
-    return (await res.json()) as { post: Post };
-  }, [post.id]);
+  const patch = useCallback(
+    async (data: Record<string, unknown>) => {
+      const res = await fetch(`/api/posts/${post.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(data) });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error ?? String(res.status));
+      }
+      return (await res.json()) as { post: Post };
+    },
+    [post.id],
+  );
 
-  /* ---------- autosave title/body, 900ms after the last keystroke ---------- */
+  /* ---------- autosave (title · subtitle · body), 900ms after the last keystroke ---------- */
+  const isDirty = () => title !== lastSaved.current.title || subtitle !== lastSaved.current.subtitle || body !== lastSaved.current.body;
   const flush = useCallback(async () => {
     clearTimeout(timer.current);
-    if (title === lastSaved.current.title && body === lastSaved.current.body) return;
+    if (title === lastSaved.current.title && subtitle === lastSaved.current.subtitle && body === lastSaved.current.body) return;
     setSave("saving");
     try {
-      await patch({ title, body });
-      lastSaved.current = { title, body };
+      await patch({ title, subtitle, body });
+      lastSaved.current = { title, subtitle, body };
       setSave("saved");
     } catch {
       setSave("failed");
     }
-  }, [title, body, patch]);
+  }, [title, subtitle, body, patch]);
 
   useEffect(() => {
-    if (title === lastSaved.current.title && body === lastSaved.current.body) return;
+    if (title === lastSaved.current.title && subtitle === lastSaved.current.subtitle && body === lastSaved.current.body) return;
     setSave("dirty");
     clearTimeout(timer.current);
     timer.current = setTimeout(() => void flush(), 900);
     return () => clearTimeout(timer.current);
-  }, [title, body, flush]);
+  }, [title, subtitle, body, flush]);
+
+  // 주소를 손대기 전에는 영문 제목을 따라간다
+  const onTitle = (v: string) => {
+    setTitle(v);
+    if (!slugTouched.current && status === "draft" && /[a-z]/i.test(v)) setSlug(slugify(v));
+  };
 
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
-      if (title !== lastSaved.current.title || body !== lastSaved.current.body) e.preventDefault();
+      if (isDirty()) e.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [title, body]);
+  });
 
-  /* ---------- publish panel ---------- */
+  const saveSlug = async () => {
+    const s = slug.trim().toLowerCase();
+    if (!s || s === post.slug) return;
+    if (!SLUG_RE.test(s)) {
+      setNote("주소는 영문 소문자·숫자·하이픈만");
+      return;
+    }
+    try {
+      await patch({ slug: s });
+      setSlug(s);
+      setNote("");
+    } catch (e) {
+      setNote(e instanceof Error && e.message === "slug_taken" ? "이미 쓰는 주소입니다" : "주소를 저장하지 못했습니다");
+    }
+  };
+
+  /* ---------- publish ---------- */
   const openPanel = () => {
     if (stage !== 0) return;
-    if (status === "draft" && /^d-[0-9a-f]{8}$/.test(slug)) setSlug(slugify(title));
     setStage(1);
     setNote("");
   };
@@ -93,7 +122,7 @@ export default function Editor({ post, drafts, tags }: Props) {
   const publish = async () => {
     if (stage !== 1) return;
     const s = slug.trim().toLowerCase();
-    if (!/^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/.test(s)) {
+    if (!SLUG_RE.test(s)) {
       setNote("주소는 영문 소문자·숫자·하이픈만");
       return;
     }
@@ -126,8 +155,9 @@ export default function Editor({ post, drafts, tags }: Props) {
     }
     try {
       await fetch(`/api/posts/${post.id}`, { method: "DELETE" });
-      lastSaved.current = { title, body }; // silence the unload warning
-      router.push("/write");
+      lastSaved.current = { title, subtitle, body };
+      document.querySelector(".page")?.classList.add("leaving");
+      setTimeout(() => router.push("/write"), 260);
     } catch {
       setNote("잠시 뒤에 다시 시도해 주세요");
     }
@@ -181,11 +211,26 @@ export default function Editor({ post, drafts, tags }: Props) {
       </div>
 
       <div className="editor">
-        <input className="editor-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="제목" spellCheck={false} onKeyDown={(e) => e.key === "Enter" && bodyRef.current?.focus()} />
-        <textarea ref={bodyRef} className="editor-body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="쓰기 시작하세요" spellCheck={false} />
+        <input className="editor-title" value={title} onChange={(e) => onTitle(e.target.value)} placeholder="제목" spellCheck={false} onKeyDown={(e) => e.key === "Enter" && subtitleRef.current?.focus()} />
+        <input ref={subtitleRef} className="editor-subtitle" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="부제목" spellCheck={false} onKeyDown={(e) => e.key === "Enter" && bodyRef.current?.focus()} />
+        <div className="editor-meta slug">
+          <span>/write/</span>
+          <input
+            value={slug}
+            onChange={(e) => {
+              slugTouched.current = true;
+              setSlug(e.target.value);
+            }}
+            onBlur={() => void saveSlug()}
+            placeholder="주소"
+            spellCheck={false}
+            style={{ width: Math.max(4, slug.length) + "ch" }}
+          />
+          {note && <span className="editor-note">{note}</span>}
+        </div>
+        <textarea ref={bodyRef} className="editor-body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="본문" spellCheck={false} />
 
-        {/* publish panel: unfolds beneath the text */}
-        <div className="pub" style={{ maxHeight: stage === 0 ? 0 : stage === 3 ? 110 : 360, opacity: open ? 1 : 0, filter: stage === 2 ? "blur(2px)" : "blur(0)" }} inert={!open}>
+        <div className="pub" style={{ maxHeight: stage === 0 ? 0 : stage === 3 ? 110 : 300, opacity: open ? 1 : 0, filter: stage === 2 ? "blur(2px)" : "blur(0)" }} inert={!open}>
           <div className="pub-inner">
             {(stage === 1 || stage === 2) && (
               <>
@@ -200,13 +245,10 @@ export default function Editor({ post, drafts, tags }: Props) {
                     </span>
                   ))}
                   <span style={{ flex: 1 }} />
-                  <span className="pub-slug">
-                    /write/
-                    <input value={slug} onChange={(e) => setSlug(e.target.value)} spellCheck={false} style={{ width: Math.max(6, slug.length) + "ch" }} />
-                  </span>
+                  <span className="pub-slug">/write/{slug}</span>
                 </div>
                 <div className="pub-foot">
-                  <span style={{ display: "flex", gap: 16 }}>
+                  <span style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                     <span className="pv-esc" onClick={closePanel}>
                       Esc 로 닫기
                     </span>
@@ -218,7 +260,6 @@ export default function Editor({ post, drafts, tags }: Props) {
                         초안으로
                       </span>
                     )}
-                    {note && <span className="pv-esc" style={{ color: INK }}>{note}</span>}
                   </span>
                   <span className="pub-go" onClick={() => void publish()}>
                     {status === "published" ? "다시 발행하기" : "발행하기"}
@@ -240,7 +281,7 @@ export default function Editor({ post, drafts, tags }: Props) {
         <div className="editor-bar">
           <span className="pv-esc" style={{ cursor: "default" }}>
             {tag.trim() ? `태그 ${tag.trim()}` : "태그 없음"}
-            {status === "published" ? ` · 발행됨` : ""}
+            {status === "published" ? " · 발행됨" : " · 초안"}
           </span>
           <span className="pub-btn" style={{ color: open ? DIM : INK }} onClick={openPanel}>
             발행

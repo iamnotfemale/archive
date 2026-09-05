@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Work } from "@/lib/types";
+import { firstImage } from "@/lib/markdown";
 
 /** 작업 목록. 행에 마우스를 올리면 오른쪽 여백에 썸네일과 한 줄 메모, 클릭하면 상세. */
 export default function Works({ works, writable }: { works: Work[]; writable: boolean }) {
@@ -27,6 +28,7 @@ export default function Works({ works, writable }: { works: Work[]; writable: bo
     timer.current = setTimeout(() => setLeaving(true), 160);
   };
   const hv = hover ? works.find((w) => w.id === hover) ?? null : null;
+  const thumbOf = (w: Work) => w.thumb || firstImage(w.body);
   const shown = !!hv && !leaving;
   const open = (w: Work) => router.push(w.status === "draft" ? `/portfolio/edit/${w.id}` : `/portfolio/${w.slug}`);
 
@@ -77,9 +79,9 @@ export default function Works({ works, writable }: { works: Work[]; writable: bo
         {hv && (
           <>
             <div className="thumb" style={{ height: 150 }}>
-              {hv.thumb ? (
+              {thumbOf(hv) ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={hv.thumb} alt="" />
+                <img src={thumbOf(hv)} alt="" />
               ) : (
                 <span>이미지</span>
               )}

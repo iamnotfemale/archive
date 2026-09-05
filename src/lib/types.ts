@@ -20,6 +20,7 @@ export interface Post {
   id: string;
   slug: string;
   title: string;
+  subtitle: string;
   body: string;
   tag: string;
   status: PostStatus;
@@ -29,7 +30,7 @@ export interface Post {
   publishedAt: string | null;
 }
 
-export type PostPatch = Partial<Pick<Post, "slug" | "title" | "body" | "tag" | "status" | "scope">>;
+export type PostPatch = Partial<Pick<Post, "slug" | "title" | "subtitle" | "body" | "tag" | "status" | "scope">>;
 
 /** 포트폴리오 작업. 본문은 글과 같은 마크다운. */
 export interface Work {
