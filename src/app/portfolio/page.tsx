@@ -1,6 +1,5 @@
 import Rail from "@/components/Rail";
 import PortfolioWorks from "@/components/PortfolioWorks";
-import PrintButton from "@/components/PrintButton";
 import { site } from "@/content/site";
 import { cv } from "@/content/portfolio";
 import { canWrite } from "@/lib/auth";
@@ -26,7 +25,6 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   return (
     <div className="page cv">
       <Rail />
-      <PrintButton />
 
       <div className="body cv-body">
         <div className="grid">
@@ -58,6 +56,26 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         ))}
 
         <PortfolioWorks works={works} writable={writable} editId={edit ?? null} />
+
+        <section className="grid cv-block">
+          <div>
+            <div className="cv-label">연락</div>
+          </div>
+          <div>
+            <div className="cv-line" />
+            <div className="cv-contacts">
+              {site.contacts.map((c) => (
+                <div key={c.label} className="cv-contact">
+                  <span className="cv-contact-label">{c.label}</span>
+                  <a href={c.href} target={c.href.startsWith("mailto:") ? undefined : "_blank"} rel="noreferrer" className="cv-contact-value">
+                    {c.value}
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div />
+        </section>
       </div>
     </div>
   );

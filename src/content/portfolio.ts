@@ -32,6 +32,6 @@ export const cv: CvBlock[] = [
   },
   {
     label: "학력",
-    rows: [{ title: "고려대학교", sub: "인공지능학과", when: "2015 — " }],
+    rows: [{ title: "고려대학교", sub: "인공지능학과", when: "2025 — " }],
   },
 ];
