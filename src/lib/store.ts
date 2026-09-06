@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import type { Item, ItemPatch, NewItem, Post, PostPatch, Work, WorkPatch } from "./types";
+import type { Item, ItemPatch, NewItem, Post, PostPatch, Profile, Work, WorkPatch } from "./types";
 
 export interface Store {
   list(): Promise<Item[]>;
@@ -23,6 +23,9 @@ export interface Store {
   createWork(): Promise<Work>;
   updateWork(id: string, patch: WorkPatch): Promise<Work | null>;
   removeWork(id: string): Promise<boolean>;
+
+  getProfile(): Promise<Profile | null>;
+  setProfile(profile: Profile): Promise<Profile>;
 }
 
 type WorkRow = {
@@ -179,11 +182,29 @@ async function pgStore(connection: string): Promise<Store> {
         updated_at timestamptz NOT NULL DEFAULT now()
       )`,
       )
+      .then(
+        () => sql`
+      CREATE TABLE IF NOT EXISTS profile (
+        id text PRIMARY KEY,
+        data jsonb NOT NULL,
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )`,
+      )
       .then(() => undefined);
   }
   await g.__archiveReady;
 
   return {
+    async getProfile() {
+      const rows = await sql<{ data: Profile }[]>`SELECT data FROM profile WHERE id = 'main' LIMIT 1`;
+      return rows[0]?.data ?? null;
+    },
+    async setProfile(profile) {
+      await sql`INSERT INTO profile (id, data) VALUES ('main', ${sql.json(profile as unknown as Parameters<typeof sql.json>[0])})
+        ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`;
+      return profile;
+    },
+
     async listWorks() {
       const rows = await sql<WorkRow[]>`SELECT * FROM works`;
       return sortWorks(rows.map(rowToWork));
@@ -344,7 +365,24 @@ async function writeWorks(works: Work[]) {
   await fs.writeFile(WORKS_FILE, JSON.stringify(works, null, 2), "utf8");
 }
 
+const PROFILE_FILE = path.join(process.cwd(), ".data", "profile.json");
+
 const fileStore: Store = {
+  getProfile: () =>
+    locked(async () => {
+      try {
+        return JSON.parse(await fs.readFile(PROFILE_FILE, "utf8")) as Profile;
+      } catch {
+        return null;
+      }
+    }),
+  setProfile: (profile) =>
+    locked(async () => {
+      await fs.mkdir(path.dirname(PROFILE_FILE), { recursive: true });
+      await fs.writeFile(PROFILE_FILE, JSON.stringify(profile, null, 2), "utf8");
+      return profile;
+    }),
+
   listWorks: () => locked(async () => sortWorks(await readWorks())),
   getWork: (id) => locked(async () => (await readWorks()).find((w) => w.id === id) ?? null),
   getWorkBySlug: (slug) => locked(async () => (await readWorks()).find((w) => w.slug === slug) ?? null),

@@ -325,6 +325,8 @@ input::placeholder {
 
 .row-wrap {
   overflow: hidden;
+  margin: 0 -48px;
+  padding: 0 48px;
   transition: opacity 0.3s var(--ease), max-height 0.4s var(--ease);
 }
 .row {
@@ -1613,5 +1615,158 @@ a.wordmark {
   }
   .editor-sheet .editor {
     height: calc(100dvh - 48px);
+  }
+}
+
+/* ---------- portfolio edit mode ---------- */
+
+.corner-text.edit-toggle {
+  right: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  user-select: none;
+}
+.corner-sub {
+  font-size: 10px;
+  color: var(--ink-38);
+}
+.cv-root input {
+  width: 100%;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 2px;
+  transition: border-color 0.25s var(--ease);
+}
+.cv-root input:focus {
+  border-color: var(--ink);
+}
+input.cv-lead,
+input.cv-sub {
+  display: block;
+}
+input.cv-sub {
+  margin-top: 22px;
+}
+.cv-label-edit {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.cv-label-edit input {
+  width: 8ch;
+  text-align: right;
+  font: inherit;
+  color: var(--ink);
+}
+.cv-row.editable,
+.cv-contact.editable {
+  position: relative;
+}
+.cv-row.editable input.cv-title {
+  flex: 0 1 36%;
+}
+.cv-row.editable input.cv-sub-text {
+  flex: 1;
+}
+.cv-row.editable input.cv-when {
+  flex: 0 0 11ch;
+  text-align: right;
+}
+.cv-contact.editable input.cv-contact-label {
+  width: 96px;
+  flex: none;
+}
+.cv-contact.editable input.cv-contact-value {
+  flex: 1;
+  text-decoration: none;
+}
+.cv-contact.editable input.cv-contact-href {
+  flex: 1.4;
+  font-family: var(--serif);
+  font-size: 11px;
+  color: var(--ink-50);
+}
+.cv-handle {
+  touch-action: none;
+  position: absolute;
+  left: -30px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--serif);
+  font-size: 13px;
+  color: var(--ink-38);
+  cursor: grab;
+  user-select: none;
+  transition: color 0.25s var(--ease);
+}
+.cv-label-edit .cv-handle {
+  position: static;
+  transform: none;
+}
+.cv-handle:hover,
+.editable:hover .cv-handle {
+  color: var(--ink);
+}
+.cv-x {
+  position: absolute;
+  right: -30px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--serif);
+  font-size: 13px;
+  color: var(--ink-38);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.25s var(--ease);
+  white-space: nowrap;
+}
+.cv-label-edit .cv-x {
+  position: static;
+  transform: none;
+}
+.cv-x:hover {
+  color: var(--ink);
+}
+.dragging {
+  opacity: 0.35;
+}
+.cv-add {
+  padding: 10px 0;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--ink-42);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.25s var(--ease);
+}
+.cv-add:hover {
+  color: var(--ink);
+}
+.cv-add.section {
+  margin-top: 40px;
+}
+.cv-block.editable {
+  cursor: default;
+}
+
+@media (max-width: 720px) {
+  .cv-handle,
+  .cv-x {
+    position: static;
+    transform: none;
+  }
+  .cv-row.editable,
+  .cv-contact.editable {
+    gap: 8px 10px;
+  }
+  .corner-text.edit-toggle {
+    right: 62px;
+    top: 18px;
+  }
+  .cv .corner.plus {
+    right: 110px;
   }
 }

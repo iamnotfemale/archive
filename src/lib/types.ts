@@ -49,3 +49,28 @@ export interface Work {
 }
 
 export type WorkPatch = Partial<Pick<Work, "slug" | "title" | "kind" | "role" | "year" | "note" | "thumb" | "body" | "status">>;
+
+/** /portfolio 의 이력 부분. 사이트의 수정 모드에서 고친다. */
+export interface CvRow {
+  id: string;
+  title: string;
+  sub: string;
+  when: string;
+}
+export interface CvSection {
+  id: string;
+  label: string;
+  rows: CvRow[];
+}
+export interface Contact {
+  id: string;
+  label: string;
+  value: string;
+  href: string;
+}
+export interface Profile {
+  intro: string;
+  sub: string;
+  sections: CvSection[];
+  contacts: Contact[];
+}

@@ -1,10 +1,10 @@
 import Rail from "@/components/Rail";
-import PortfolioWorks from "@/components/PortfolioWorks";
+import Cv from "@/components/Cv";
 import { site } from "@/content/site";
-import { cv } from "@/content/portfolio";
+import { defaultProfile } from "@/content/profile";
 import { canWrite } from "@/lib/auth";
 import { getStore } from "@/lib/store";
-import type { Work } from "@/lib/types";
+import type { Profile, Work } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +14,12 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   const { edit } = await searchParams;
   const writable = await canWrite();
   let works: Work[] = [];
+  let profile: Profile = defaultProfile();
   try {
     const store = await getStore();
-    const all = await store.listWorks();
+    const [all, saved] = await Promise.all([store.listWorks(), store.getProfile()]);
     works = writable ? all : all.filter((w) => w.status === "published");
+    if (saved) profile = saved;
   } catch {
     works = [];
   }
@@ -25,57 +27,8 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   return (
     <div className="page cv">
       <Rail />
-
       <div className="body cv-body">
-        <div className="grid">
-          <div />
-          <div className="cv-intro">
-            <div className="cv-lead">{site.intro}</div>
-            <div className="cv-sub">{site.sub}</div>
-          </div>
-          <div />
-        </div>
-
-        {cv.map((b) => (
-          <section key={b.label} className="grid cv-block">
-            <div>
-              <div className="cv-label">{b.label}</div>
-            </div>
-            <div>
-              <div className="cv-line" />
-              {b.rows.map((r, i) => (
-                <div key={i} className="cv-row">
-                  <span className="cv-title">{r.title}</span>
-                  <span className="cv-sub-text">{r.sub}</span>
-                  <span className="cv-when">{r.when}</span>
-                </div>
-              ))}
-            </div>
-            <div />
-          </section>
-        ))}
-
-        <PortfolioWorks works={works} writable={writable} editId={edit ?? null} />
-
-        <section className="grid cv-block">
-          <div>
-            <div className="cv-label">연락</div>
-          </div>
-          <div>
-            <div className="cv-line" />
-            <div className="cv-contacts">
-              {site.contacts.map((c) => (
-                <div key={c.label} className="cv-contact">
-                  <span className="cv-contact-label">{c.label}</span>
-                  <a href={c.href} target={c.href.startsWith("mailto:") ? undefined : "_blank"} rel="noreferrer" className="cv-contact-value">
-                    {c.value}
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div />
-        </section>
+        <Cv profile={profile} works={works} writable={writable} editId={edit ?? null} />
       </div>
     </div>
   );
