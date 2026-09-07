@@ -129,8 +129,8 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
   return (
     <div className={`cv-root${editing ? " editing" : ""}`}>
       {writable && (
-        <div className="corner-text edit-toggle" onClick={() => (editing ? void done() : setEditing(true))}>
-          {editing ? "완료" : "수정"}
+        <div className="corner edit-toggle" title={editing ? "완료" : "수정"} onClick={() => (editing ? void done() : setEditing(true))}>
+          {editing ? "✓" : "&"}
           {editing && <span className="corner-sub">{savedLabel}</span>}
         </div>
       )}
@@ -216,7 +216,7 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
         </div>
       )}
 
-      <PortfolioWorks works={works} writable={writable} editId={editId} />
+      <PortfolioWorks works={works} writable={writable} editId={editId} hideAdd={editing} />
 
       {/* contacts */}
       {(p.contacts.length > 0 || editing) && (

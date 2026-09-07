@@ -18,12 +18,13 @@ const FIELDS = ["title", "note", "year", "body"] as const; // note = 부제목
 type Field = (typeof FIELDS)[number];
 type Draft = Pick<Work, Field>;
 
-/** 작업 편집기. 목록 위 베일 안에서 뜬다. 제목 · 부제목 · 주소 · 연도 · 본문. */
+/** 작업 편집기. 목록 위 베일 안에서 뜬다. 제목 · 부제목 · 주소 · 연도 · 본문, 아래 "발행" 한 번. */
 export default function WorkEditorSheet({ work, onChange, onClose, onDelete }: Props) {
   const [d, setD] = useState<Draft>({ title: work.title, note: work.note, year: work.year, body: work.body });
   const [slug, setSlug] = useState(/^d-[0-9a-f]{8}$/.test(work.slug) ? slugify(work.title) : work.slug);
   const [status, setStatus] = useState(work.status);
-  const [stage, setStage] = useState<0 | 1 | 2 | 3>(0);
+  const [busy, setBusy] = useState<"" | "publish" | "unpublish">("");
+  const [ink, setInk] = useState(false);
   const [save, setSave] = useState<"saved" | "dirty" | "saving" | "failed">("saved");
   const [note, setNote] = useState("");
   const [confirmDel, setConfirmDel] = useState(false);
@@ -33,12 +34,13 @@ export default function WorkEditorSheet({ work, onChange, onClose, onDelete }: P
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const slugTouched = useRef(!/^d-[0-9a-f]{8}$/.test(work.slug));
+  const [savedSlug, setSavedSlug] = useState(work.slug);
   const lastSaved = useRef<Draft>({ ...d });
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
-    setTimeout(() => titleRef.current?.focus(), 80);
-  }, []);
+    setTimeout(() => (work.title ? bodyRef : titleRef).current?.focus(), 80);
+  }, [work.title]);
 
   const set = (k: Field) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setD((p) => ({ ...p, [k]: e.target.value }));
 
@@ -51,10 +53,15 @@ export default function WorkEditorSheet({ work, onChange, onClose, onDelete }: P
       }
       const json = (await res.json()) as { work: Work };
       onChange(json.work);
-      return json;
+      return json.work;
     },
     [work.id, onChange],
   );
+
+  const explain = (e: unknown) => {
+    const code = e instanceof Error ? e.message : "";
+    return code === "slug_taken" ? "이미 쓰는 주소입니다" : code === "invalid_slug" ? "주소는 영문 소문자·숫자·하이픈만" : code === "locked" ? "열쇠가 없습니다 · /key 로 다시 들어오세요" : code === "no_database" ? "데이터베이스가 연결되지 않았습니다" : code === "no_blob" ? "이미지 저장소가 아직 없습니다" : code === "too_large" ? "12MB 이하 이미지만" : code === "bad_type" ? "jpg · png · webp · gif · avif · svg 만" : "저장하지 못했습니다 · 잠시 뒤 다시";
+  };
 
   const flush = useCallback(async () => {
     clearTimeout(timer.current);
@@ -64,8 +71,10 @@ export default function WorkEditorSheet({ work, onChange, onClose, onDelete }: P
       await patch(d);
       lastSaved.current = { ...d };
       setSave("saved");
-    } catch {
+      setNote("");
+    } catch (e) {
       setSave("failed");
+      setNote(explain(e));
     }
   }, [d, patch]);
 
@@ -82,19 +91,22 @@ export default function WorkEditorSheet({ work, onChange, onClose, onDelete }: P
     if (!slugTouched.current && status === "draft" && /[a-z]/i.test(v)) setSlug(slugify(v));
   };
 
-  const saveSlug = async () => {
+  const saveSlug = async (): Promise<string | null> => {
     const s = slug.trim().toLowerCase();
-    if (!s || s === work.slug) return;
     if (!SLUG_RE.test(s)) {
       setNote("주소는 영문 소문자·숫자·하이픈만");
-      return;
+      return null;
     }
+    if (s === savedSlug) return s;
     try {
       await patch({ slug: s });
+      setSavedSlug(s);
       setSlug(s);
       setNote("");
+      return s;
     } catch (e) {
-      setNote(e instanceof Error && e.message === "slug_taken" ? "이미 쓰는 주소입니다" : "주소를 저장하지 못했습니다");
+      setNote(explain(e));
+      return null;
     }
   };
 
@@ -126,51 +138,44 @@ export default function WorkEditorSheet({ work, onChange, onClose, onDelete }: P
         ta.setSelectionRange(at, at);
       }, 0);
     } catch (e) {
-      const code = e instanceof Error ? e.message : "";
-      setNote(code === "no_blob" ? "이미지 저장소가 아직 없습니다" : code === "too_large" ? "12MB 이하 이미지만" : code === "bad_type" ? "jpg · png · webp · gif · avif · svg 만" : "이미지를 올리지 못했습니다");
+      setNote(explain(e));
       setTimeout(() => setNote(""), 5000);
     } finally {
       setUploading(false);
     }
   };
 
-  /* ---------- publish ---------- */
-  const openPanel = () => {
-    if (stage !== 0) return;
-    setStage(1);
-    setNote("");
-  };
-  const closePanel = () => {
-    setStage(0);
-    setNote("");
-  };
+  /* ---------- publish: one press ---------- */
   const publish = async () => {
-    if (stage !== 1) return;
-    const s = slug.trim().toLowerCase();
-    if (!SLUG_RE.test(s)) {
-      setNote("주소는 영문 소문자·숫자·하이픈만");
-      return;
-    }
-    setStage(2);
+    if (busy) return;
+    setBusy("publish");
+    setNote("");
     try {
       await flush();
-      await patch({ slug: s, status: "published" });
-      setSlug(s);
+      const s = await saveSlug();
+      if (!s) return;
+      setInk(true);
+      await patch({ status: "published" });
       setStatus("published");
-      setTimeout(() => setStage(3), 420);
+      setTimeout(() => setInk(false), 420);
     } catch (e) {
-      setStage(1);
-      const code = e instanceof Error ? e.message : "";
-      setNote(code === "slug_taken" ? "이미 쓰는 주소입니다" : code === "locked" ? "열쇠가 없습니다" : "잠시 뒤에 다시 시도해 주세요");
+      setInk(false);
+      setNote(explain(e));
+    } finally {
+      setBusy("");
     }
   };
   const unpublish = async () => {
+    if (busy) return;
+    setBusy("unpublish");
     try {
       await patch({ status: "draft" });
       setStatus("draft");
-      setStage(0);
-    } catch {
-      setNote("잠시 뒤에 다시 시도해 주세요");
+      setNote("");
+    } catch (e) {
+      setNote(explain(e));
+    } finally {
+      setBusy("");
     }
   };
   const remove = async () => {
@@ -184,8 +189,8 @@ export default function WorkEditorSheet({ work, onChange, onClose, onDelete }: P
       const res = await fetch(`/api/works/${work.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(String(res.status));
       onDelete(work.id);
-    } catch {
-      setNote("잠시 뒤에 다시 시도해 주세요");
+    } catch (e) {
+      setNote(explain(e));
     }
   };
 
@@ -194,8 +199,7 @@ export default function WorkEditorSheet({ work, onChange, onClose, onDelete }: P
     keyRef.current = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        if (stage === 1) closePanel();
-        else void close();
+        void close();
       }
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
@@ -210,11 +214,10 @@ export default function WorkEditorSheet({ work, onChange, onClose, onDelete }: P
   }, []);
 
   const chars = d.body.replace(/\s/g, "").length;
-  const savedLabel = save === "saving" ? "저장 중" : save === "dirty" ? "쓰는 중" : save === "failed" ? "저장 실패" : status === "published" ? "발행됨" : "저장됨";
-  const open = stage >= 1;
+  const savedLabel = save === "saving" ? "저장 중" : save === "dirty" ? "쓰는 중" : save === "failed" ? "저장 실패" : "저장됨";
 
   return (
-    <div className="editor">
+    <div className="editor" style={{ filter: ink ? "blur(2px)" : "blur(0)", transition: "filter .3s ease-out" }}>
       <div className="sheet-head">
         <span className="pv-esc" onClick={() => void close()}>
           닫기
@@ -241,7 +244,6 @@ export default function WorkEditorSheet({ work, onChange, onClose, onDelete }: P
         />
         <span style={{ flex: 1 }} />
         <input value={d.year} onChange={set("year")} placeholder="연도" spellCheck={false} style={{ width: "5ch", flex: "none", textAlign: "right" }} />
-        {note && <span className="editor-note">{note}</span>}
       </div>
       <textarea
         ref={bodyRef}
@@ -259,52 +261,34 @@ export default function WorkEditorSheet({ work, onChange, onClose, onDelete }: P
         }}
       />
 
-      <div className="pub" style={{ maxHeight: stage === 0 ? 0 : stage === 3 ? 110 : 200, opacity: open ? 1 : 0, filter: stage === 2 ? "blur(2px)" : "blur(0)" }} inert={!open}>
-        <div className="pub-inner">
-          {(stage === 1 || stage === 2) && (
-            <div className="pub-foot" style={{ marginTop: 0 }}>
-              <span style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                <span className="pv-esc" onClick={closePanel}>
-                  Esc 로 닫기
-                </span>
-                {status === "published" && (
-                  <span className="pv-esc" onClick={() => void unpublish()}>
-                    초안으로
-                  </span>
-                )}
-                <span className="pub-slug">/portfolio/{slug}</span>
-              </span>
-              <span className="pub-go" onClick={() => void publish()}>
-                {status === "published" ? "다시 발행하기" : "발행하기"}
-              </span>
-            </div>
-          )}
-          {stage === 3 && (
-            <div className="pub-done">
-              <span>발행되었습니다.</span>
-              <a href={`/portfolio/${slug}`} className="pub-link">
-                /portfolio/{slug} ↗
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
-
       <div className="editor-bar">
-        <span style={{ display: "flex", gap: 16, alignItems: "baseline", flexWrap: "wrap" }}>
+        <span className="bar-left">
+          <span className="pv-esc" style={{ cursor: "default", color: status === "published" ? INK : undefined }}>
+            {status === "published" ? "발행됨" : "초안"}
+          </span>
+          {status === "published" && (
+            <a href={`/portfolio/${savedSlug}`} className="pv-esc" target="_blank" rel="noreferrer">
+              보기 ↗
+            </a>
+          )}
+          {status === "published" && (
+            <span className="pv-esc" onClick={() => void unpublish()}>
+              {busy === "unpublish" ? "되돌리는 중" : "초안으로"}
+            </span>
+          )}
           <span className="pv-esc" onClick={() => fileRef.current?.click()}>
             {uploading ? "올리는 중" : "이미지"}
           </span>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && void insertImage(e.target.files[0])} />
-          <span className="pv-esc" style={{ cursor: "default" }}>
-            {status === "published" ? "발행됨" : "초안"}
-          </span>
           <span className="pv-esc" onClick={() => void remove()} style={{ color: confirmDel ? INK : undefined }}>
             {confirmDel ? "정말 지우기" : "지우기"}
           </span>
+          {note && <span className="pv-esc editor-note-bar">{note}</span>}
         </span>
-        <span className="pub-btn" style={{ color: open ? DIM : INK }} onClick={openPanel}>
-          발행
+        <span className="bar-right">
+          <span className="pub-btn" style={{ color: busy === "publish" ? DIM : INK }} onClick={() => void publish()}>
+            {busy === "publish" ? "발행 중" : status === "published" ? "다시 발행" : "발행"}
+          </span>
         </span>
       </div>
     </div>

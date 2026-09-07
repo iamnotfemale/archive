@@ -16,18 +16,18 @@ type Props = {
 const INK = "#1F1D1A";
 const DIM = "rgba(31,29,26,.42)";
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/;
+const FIELDS = ["title", "subtitle", "body", "tag", "scope"] as const;
+type Field = (typeof FIELDS)[number];
+type Draft = Pick<Post, Field>;
 
-/** 글 편집기. 목록 위 베일 안에서 뜬다. 제목 · 부제목 · 주소 · 본문. */
+/** 글 편집기. 목록 위 베일 안에서 뜬다. 제목 · 부제목 · 주소 · 태그 · 본문, 아래 "발행" 한 번. */
 export default function EditorSheet({ post, tags, onChange, onClose, onDelete }: Props) {
-  const [title, setTitle] = useState(post.title);
-  const [subtitle, setSubtitle] = useState(post.subtitle);
-  const [body, setBody] = useState(post.body);
-  const [tag, setTag] = useState(post.tag);
+  const [d, setD] = useState<Draft>({ title: post.title, subtitle: post.subtitle, body: post.body, tag: post.tag, scope: post.scope });
   const [tagF, setTagF] = useState(false);
-  const [scope, setScope] = useState<PostScope>(post.scope);
   const [slug, setSlug] = useState(/^d-[0-9a-f]{8}$/.test(post.slug) ? slugify(post.title) : post.slug);
   const [status, setStatus] = useState(post.status);
-  const [stage, setStage] = useState<0 | 1 | 2 | 3>(0); // 0 closed · 1 form · 2 ink · 3 done
+  const [busy, setBusy] = useState<"" | "publish" | "unpublish">("");
+  const [ink, setInk] = useState(false);
   const [save, setSave] = useState<"saved" | "dirty" | "saving" | "failed">("saved");
   const [note, setNote] = useState("");
   const [confirmDel, setConfirmDel] = useState(false);
@@ -35,12 +35,15 @@ export default function EditorSheet({ post, tags, onChange, onClose, onDelete }:
   const subtitleRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const slugTouched = useRef(!/^d-[0-9a-f]{8}$/.test(post.slug));
-  const lastSaved = useRef({ title: post.title, subtitle: post.subtitle, body: post.body });
+  const [savedSlug, setSavedSlug] = useState(post.slug);
+  const lastSaved = useRef<Draft>({ ...d });
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
-    setTimeout(() => titleRef.current?.focus(), 80);
-  }, []);
+    setTimeout(() => (post.title ? bodyRef : titleRef).current?.focus(), 80);
+  }, [post.title]);
+
+  const set = (k: Field) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setD((p) => ({ ...p, [k]: e.target.value }));
 
   const patch = useCallback(
     async (data: Record<string, unknown>) => {
@@ -51,52 +54,63 @@ export default function EditorSheet({ post, tags, onChange, onClose, onDelete }:
       }
       const json = (await res.json()) as { post: Post };
       onChange(json.post);
-      return json;
+      return json.post;
     },
     [post.id, onChange],
   );
 
-  /* ---------- autosave, 900ms after the last keystroke ---------- */
+  const explain = (e: unknown) => {
+    const code = e instanceof Error ? e.message : "";
+    return code === "slug_taken" ? "이미 쓰는 주소입니다" : code === "invalid_slug" ? "주소는 영문 소문자·숫자·하이픈만" : code === "locked" ? "열쇠가 없습니다 · /key 로 다시 들어오세요" : code === "no_database" ? "데이터베이스가 연결되지 않았습니다" : "저장하지 못했습니다 · 잠시 뒤 다시";
+  };
+
+  /* ---------- autosave (everything but slug/status), 900ms after the last keystroke ---------- */
   const flush = useCallback(async () => {
     clearTimeout(timer.current);
-    if (title === lastSaved.current.title && subtitle === lastSaved.current.subtitle && body === lastSaved.current.body) return;
+    if (!FIELDS.some((k) => d[k] !== lastSaved.current[k])) return;
     setSave("saving");
     try {
-      await patch({ title, subtitle, body });
-      lastSaved.current = { title, subtitle, body };
+      await patch(d);
+      lastSaved.current = { ...d };
       setSave("saved");
-    } catch {
+      setNote("");
+    } catch (e) {
       setSave("failed");
+      setNote(explain(e));
     }
-  }, [title, subtitle, body, patch]);
+  }, [d, patch]);
 
   useEffect(() => {
-    if (title === lastSaved.current.title && subtitle === lastSaved.current.subtitle && body === lastSaved.current.body) return;
+    if (!FIELDS.some((k) => d[k] !== lastSaved.current[k])) return;
     setSave("dirty");
     clearTimeout(timer.current);
     timer.current = setTimeout(() => void flush(), 900);
     return () => clearTimeout(timer.current);
-  }, [title, subtitle, body, flush]);
+  }, [d, flush]);
 
   // 주소를 손대기 전에는 영문 제목을 따라간다
   const onTitle = (v: string) => {
-    setTitle(v);
+    setD((p) => ({ ...p, title: v }));
     if (!slugTouched.current && status === "draft" && /[a-z]/i.test(v)) setSlug(slugify(v));
   };
 
-  const saveSlug = async () => {
+  /** Save the slug when it differs from what the server has. Returns the saved slug or null on failure. */
+  const saveSlug = async (): Promise<string | null> => {
     const s = slug.trim().toLowerCase();
-    if (!s || s === post.slug) return;
     if (!SLUG_RE.test(s)) {
       setNote("주소는 영문 소문자·숫자·하이픈만");
-      return;
+      return null;
     }
+    if (s === savedSlug) return s;
     try {
       await patch({ slug: s });
+      setSavedSlug(s);
       setSlug(s);
       setNote("");
+      return s;
     } catch (e) {
-      setNote(e instanceof Error && e.message === "slug_taken" ? "이미 쓰는 주소입니다" : "주소를 저장하지 못했습니다");
+      setNote(explain(e));
+      return null;
     }
   };
 
@@ -105,43 +119,37 @@ export default function EditorSheet({ post, tags, onChange, onClose, onDelete }:
     onClose();
   };
 
-  /* ---------- publish ---------- */
-  const openPanel = () => {
-    if (stage !== 0) return;
-    setStage(1);
-    setNote("");
-  };
-  const closePanel = () => {
-    setStage(0);
-    setNote("");
-  };
+  /* ---------- publish: one press ---------- */
   const publish = async () => {
-    if (stage !== 1) return;
-    const s = slug.trim().toLowerCase();
-    if (!SLUG_RE.test(s)) {
-      setNote("주소는 영문 소문자·숫자·하이픈만");
-      return;
-    }
-    setStage(2);
+    if (busy) return;
+    setBusy("publish");
+    setNote("");
     try {
       await flush();
-      await patch({ tag: tag.trim(), scope, slug: s, status: "published" });
-      setSlug(s);
+      const s = await saveSlug();
+      if (!s) return;
+      setInk(true);
+      await patch({ status: "published" });
       setStatus("published");
-      setTimeout(() => setStage(3), 420);
+      setTimeout(() => setInk(false), 420);
     } catch (e) {
-      setStage(1);
-      const code = e instanceof Error ? e.message : "";
-      setNote(code === "slug_taken" ? "이미 쓰는 주소입니다" : code === "locked" ? "열쇠가 없습니다" : "잠시 뒤에 다시 시도해 주세요");
+      setInk(false);
+      setNote(explain(e));
+    } finally {
+      setBusy("");
     }
   };
   const unpublish = async () => {
+    if (busy) return;
+    setBusy("unpublish");
     try {
       await patch({ status: "draft" });
       setStatus("draft");
-      setStage(0);
-    } catch {
-      setNote("잠시 뒤에 다시 시도해 주세요");
+      setNote("");
+    } catch (e) {
+      setNote(explain(e));
+    } finally {
+      setBusy("");
     }
   };
   const remove = async () => {
@@ -155,8 +163,8 @@ export default function EditorSheet({ post, tags, onChange, onClose, onDelete }:
       const res = await fetch(`/api/posts/${post.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(String(res.status));
       onDelete(post.id);
-    } catch {
-      setNote("잠시 뒤에 다시 시도해 주세요");
+    } catch (e) {
+      setNote(explain(e));
     }
   };
 
@@ -165,8 +173,7 @@ export default function EditorSheet({ post, tags, onChange, onClose, onDelete }:
     keyRef.current = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        if (stage === 1) closePanel();
-        else void close();
+        void close();
       }
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
@@ -180,12 +187,11 @@ export default function EditorSheet({ post, tags, onChange, onClose, onDelete }:
     return () => document.removeEventListener("keydown", k, true);
   }, []);
 
-  const chars = body.replace(/\s/g, "").length;
-  const savedLabel = save === "saving" ? "저장 중" : save === "dirty" ? "쓰는 중" : save === "failed" ? "저장 실패" : status === "published" ? "발행됨" : "저장됨";
-  const open = stage >= 1;
+  const chars = d.body.replace(/\s/g, "").length;
+  const savedLabel = save === "saving" ? "저장 중" : save === "dirty" ? "쓰는 중" : save === "failed" ? "저장 실패" : "저장됨";
 
   return (
-    <div className="editor">
+    <div className="editor" style={{ filter: ink ? "blur(2px)" : "blur(0)", transition: "filter .3s ease-out" }}>
       <div className="sheet-head">
         <span className="pv-esc" onClick={() => void close()}>
           닫기
@@ -195,8 +201,8 @@ export default function EditorSheet({ post, tags, onChange, onClose, onDelete }:
         </span>
       </div>
 
-      <input ref={titleRef} className="editor-title" value={title} onChange={(e) => onTitle(e.target.value)} placeholder="제목" spellCheck={false} onKeyDown={(e) => e.key === "Enter" && subtitleRef.current?.focus()} />
-      <input ref={subtitleRef} className="editor-subtitle" value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="부제목" spellCheck={false} onKeyDown={(e) => e.key === "Enter" && bodyRef.current?.focus()} />
+      <input ref={titleRef} className="editor-title" value={d.title} onChange={(e) => onTitle(e.target.value)} placeholder="제목" spellCheck={false} onKeyDown={(e) => e.key === "Enter" && subtitleRef.current?.focus()} />
+      <input ref={subtitleRef} className="editor-subtitle" value={d.subtitle} onChange={set("subtitle")} placeholder="부제목" spellCheck={false} onKeyDown={(e) => e.key === "Enter" && bodyRef.current?.focus()} />
       <div className="editor-meta slug">
         <span>/write/</span>
         <input
@@ -210,67 +216,42 @@ export default function EditorSheet({ post, tags, onChange, onClose, onDelete }:
           spellCheck={false}
           style={{ width: Math.max(4, slug.length) + "ch" }}
         />
-        {note && <span className="editor-note">{note}</span>}
       </div>
-      <textarea ref={bodyRef} className="editor-body" value={body} onChange={(e) => setBody(e.target.value)} placeholder="본문" spellCheck={false} />
-
-      <div className="pub" style={{ maxHeight: stage === 0 ? 0 : stage === 3 ? 110 : 300, opacity: open ? 1 : 0, filter: stage === 2 ? "blur(2px)" : "blur(0)" }} inert={!open}>
-        <div className="pub-inner">
-          {(stage === 1 || stage === 2) && (
-            <>
-              <div className="pub-field">
-                <input value={tag} onChange={(e) => setTag(e.target.value)} onFocus={() => setTagF(true)} onBlur={() => setTagF(false)} placeholder="태그" />
-              </div>
-              <TagSuggest tags={tags} input={tag} open={tagF} onPick={setTag} />
-              <div className="pub-row">
-                {(["public", "unlisted"] as PostScope[]).map((s) => (
-                  <span key={s} className="pub-scope" style={{ color: scope === s ? INK : DIM }} onClick={() => setScope(s)}>
-                    {s === "public" ? "전체 공개" : "링크 있는 사람만"}
-                  </span>
-                ))}
-                <span style={{ flex: 1 }} />
-                <span className="pub-slug">/write/{slug}</span>
-              </div>
-              <div className="pub-foot">
-                <span style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                  <span className="pv-esc" onClick={closePanel}>
-                    Esc 로 닫기
-                  </span>
-                  {status === "published" && (
-                    <span className="pv-esc" onClick={() => void unpublish()}>
-                      초안으로
-                    </span>
-                  )}
-                </span>
-                <span className="pub-go" onClick={() => void publish()}>
-                  {status === "published" ? "다시 발행하기" : "발행하기"}
-                </span>
-              </div>
-            </>
-          )}
-          {stage === 3 && (
-            <div className="pub-done">
-              <span>발행되었습니다.</span>
-              <a href={`/write/${slug}`} className="pub-link">
-                /write/{slug} ↗
-              </a>
-            </div>
-          )}
-        </div>
+      <div className="editor-meta tagrow">
+        <input value={d.tag} onChange={set("tag")} onFocus={() => setTagF(true)} onBlur={() => setTagF(false)} placeholder="태그" />
       </div>
+      <TagSuggest tags={tags} input={d.tag} open={tagF} onPick={(t) => setD((p) => ({ ...p, tag: t }))} />
+      <textarea ref={bodyRef} className="editor-body" value={d.body} onChange={set("body")} placeholder="본문" spellCheck={false} />
 
       <div className="editor-bar">
-        <span style={{ display: "flex", gap: 16, alignItems: "baseline", flexWrap: "wrap" }}>
-          <span className="pv-esc" style={{ cursor: "default" }}>
-            {tag.trim() ? `태그 ${tag.trim()}` : "태그 없음"}
-            {status === "published" ? " · 발행됨" : " · 초안"}
+        <span className="bar-left">
+          <span className="pv-esc" style={{ cursor: "default", color: status === "published" ? INK : undefined }}>
+            {status === "published" ? "발행됨" : "초안"}
           </span>
+          {status === "published" && (
+            <a href={`/write/${savedSlug}`} className="pv-esc" target="_blank" rel="noreferrer">
+              보기 ↗
+            </a>
+          )}
+          {status === "published" && (
+            <span className="pv-esc" onClick={() => void unpublish()}>
+              {busy === "unpublish" ? "되돌리는 중" : "초안으로"}
+            </span>
+          )}
           <span className="pv-esc" onClick={() => void remove()} style={{ color: confirmDel ? INK : undefined }}>
             {confirmDel ? "정말 지우기" : "지우기"}
           </span>
+          {note && <span className="pv-esc editor-note-bar">{note}</span>}
         </span>
-        <span className="pub-btn" style={{ color: open ? DIM : INK }} onClick={openPanel}>
-          발행
+        <span className="bar-right">
+          {(["public", "unlisted"] as PostScope[]).map((s) => (
+            <span key={s} className="pub-scope" style={{ color: d.scope === s ? INK : DIM }} onClick={() => setD((p) => ({ ...p, scope: s }))}>
+              {s === "public" ? "전체 공개" : "링크만"}
+            </span>
+          ))}
+          <span className="pub-btn" style={{ color: busy === "publish" ? DIM : INK }} onClick={() => void publish()}>
+            {busy === "publish" ? "발행 중" : status === "published" ? "다시 발행" : "발행"}
+          </span>
         </span>
       </div>
     </div>

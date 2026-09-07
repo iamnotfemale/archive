@@ -1620,16 +1620,20 @@ a.wordmark {
 
 /* ---------- portfolio edit mode ---------- */
 
-.corner-text.edit-toggle {
+.corner.edit-toggle {
   right: 72px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
-  user-select: none;
+  gap: 6px;
+}
+.cv-root.editing .corner.edit-toggle {
+  color: var(--ink);
 }
 .corner-sub {
+  font-family: var(--serif);
   font-size: 10px;
+  letter-spacing: 0.04em;
   color: var(--ink-38);
 }
 .cv-root input {
@@ -1762,11 +1766,60 @@ input.cv-sub {
   .cv-contact.editable {
     gap: 8px 10px;
   }
-  .corner-text.edit-toggle {
-    right: 62px;
-    top: 18px;
+  .corner.edit-toggle {
+    right: 20px;
+    top: 16px;
   }
   .cv .corner.plus {
-    right: 110px;
+    right: 62px;
   }
+  .cv-row .cv-sub-text {
+    order: 3;
+  }
+  .cv-row .cv-when {
+    margin-left: auto;
+  }
+}
+
+/* ---------- editor sheet: nothing squeezes, bar always reachable ---------- */
+
+.editor-sheet .editor > * {
+  flex: none;
+}
+.editor-sheet .editor > .editor-body {
+  flex: 1 1 auto;
+  min-height: 120px;
+}
+.editor-meta.tagrow {
+  margin-top: 12px;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.editor-meta.tagrow input {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+}
+.editor-sheet .suggest {
+  margin-top: 0;
+}
+.bar-left,
+.bar-right {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.bar-right {
+  gap: 18px;
+}
+.editor-note-bar {
+  color: var(--ink) !important;
+  cursor: default !important;
+}
+
+.landing-name {
+  margin-top: 0;
+  letter-spacing: 0.16em;
 }

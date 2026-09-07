@@ -9,10 +9,10 @@ import WorkEditorSheet from "./WorkEditorSheet";
 const INK = "#1F1D1A";
 const INK_45 = "rgba(31,29,26,.45)";
 
-type Props = { works: Work[]; writable: boolean; editId?: string | null };
+type Props = { works: Work[]; writable: boolean; editId?: string | null; hideAdd?: boolean };
 
 /** "작업" 섹션 + 오른쪽 위 "+" + 목록 위에 떠오르는 편집기. */
-export default function PortfolioWorks({ works: initial, writable, editId = null }: Props) {
+export default function PortfolioWorks({ works: initial, writable, editId = null, hideAdd = false }: Props) {
   const router = useRouter();
   const [works, setWorks] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -86,7 +86,7 @@ export default function PortfolioWorks({ works: initial, writable, editId = null
 
   return (
     <>
-      {writable && (
+      {writable && !hideAdd && (
         <div className="corner plus" title="새 작업" style={{ transform: editing ? "rotate(45deg)" : "none", color: busy || editing ? INK_45 : INK }} onClick={() => (editing ? closeEditor() : void create())}>
           +
         </div>
