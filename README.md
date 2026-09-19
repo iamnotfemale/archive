@@ -2,9 +2,10 @@
 
 개인 웹사이트. 링크 아카이브, 글, 포트폴리오가 한 곳에 있습니다.
 
-https://yeoziphab.vercel.app
+<img width="1891" height="853" alt="image" src="https://github.com/user-attachments/assets/66551494-7ebf-4794-8356-f414c51f6110" />
+<img width="1913" height="857" alt="image" src="https://github.com/user-attachments/assets/20e69207-806e-4c1a-a5be-57ceede6f592" />
+<img width="1896" height="861" alt="image" src="https://github.com/user-attachments/assets/47df3720-324c-4841-bf87-0e9983764b16" />
 
-<img width="1917" height="906" alt="image" src="https://github.com/user-attachments/assets/2b73daba-d576-43a8-8312-99541ccfc5ae" />
 
 | 경로 | 내용 |
 |---|---|
