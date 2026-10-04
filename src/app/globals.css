@@ -1823,3 +1823,27 @@ input.cv-sub {
   margin-top: 0;
   letter-spacing: 0.16em;
 }
+
+/* ---------- ink splash on click ---------- */
+
+.ink-drop {
+  position: fixed;
+  z-index: 50;
+  width: var(--s);
+  height: var(--s);
+  margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2);
+  border-radius: 50% 40% 55% 45%;
+  background: var(--ink);
+  pointer-events: none;
+  animation: ink-fly 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+@keyframes ink-fly {
+  0% {
+    opacity: 0.85;
+    transform: translate(0, 0) scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(1);
+  }
+}

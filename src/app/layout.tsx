@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Serif_KR } from "next/font/google";
 import "./globals.css";
+import InkSplash from "@/components/InkSplash";
 
 const serif = Noto_Serif_KR({
   weight: "400",
@@ -23,7 +24,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <InkSplash />
+      </body>
     </html>
   );
 }
