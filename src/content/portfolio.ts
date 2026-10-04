@@ -27,6 +27,7 @@ export const cv: CvBlock[] = [
   {
     label: "수상",
     rows: [
+      { title: "2026 블록체인 & AI 해커톤", sub: "우수상", when: "2026" },
       { title: "GDGKU BYPP 해커톤", sub: "대상", when: "2026" },
       { title: "제1회 SKYSH 해커톤", sub: "은상", when: "2026" },
       { title: "LG Aimers 8기", sub: "최종 2위", when: "2026" },
