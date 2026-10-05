@@ -25,13 +25,14 @@ export async function POST(req: Request) {
   const ext = (file.name.match(/\.[a-z0-9]+$/i)?.[0] ?? "").toLowerCase() || ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif", "image/avif": ".avif", "image/svg+xml": ".svg" }[file.type] ?? "");
   const name = `${new Date().toISOString().slice(0, 10)}-${randomUUID().slice(0, 8)}${ext}`;
 
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  // 토큰(BLOB_READ_WRITE_TOKEN) 또는 OIDC 연결(BLOB_STORE_ID) 둘 다 @vercel/blob 이 알아서 쓴다
+  if (process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID) {
     const { put } = await import("@vercel/blob");
     const blob = await put(`work/${name}`, file, { access: "public", contentType: file.type, addRandomSuffix: false });
     return NextResponse.json({ url: blob.url });
   }
 
-  if (process.env.VERCEL) return NextResponse.json({ error: "no_blob", detail: "BLOB_READ_WRITE_TOKEN is not set" }, { status: 503 });
+  if (process.env.VERCEL) return NextResponse.json({ error: "no_blob", detail: "Blob store is not connected" }, { status: 503 });
 
   // local dev: public/uploads is served by next dev
   const dir = path.join(process.cwd(), "public", "uploads");
