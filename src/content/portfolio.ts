@@ -19,6 +19,8 @@ export const cv: CvBlock[] = [
       { title: "고려대학교 인공지능학과", sub: "학생회장", when: "2026 —" },
       { title: "VIKA", sub: "예비창업팀 · CTO", when: "2026 —" },
       { title: "Pulse", sub: "고려대학교 정보대학 학생회 개발 TF", when: "2026 —" },
+      { title: "Pulse", sub: "고려대학교 정보대학 학생회 재정운용위원회 위원장", when: "2026" },
+      { title: "늘빛", sub: "고려대학교 인공지능학과 학생회 회칙개정특별위원회 위원장", when: "2026" },
       { title: "GDGKU", sub: "Google Developer Group on KU", when: "2025 —" },
       { title: "AIKU", sub: "고려대학교 딥러닝 학회", when: "2025 —" },
       { title: "NewLearn", sub: "고려대학교 뇌과학 학회", when: "2025" },
