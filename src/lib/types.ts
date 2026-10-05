@@ -44,11 +44,12 @@ export interface Work {
   thumb: string; // 호버 썸네일 이미지 주소
   body: string;
   status: PostStatus;
+  pos: number; // 목록 순서 (작을수록 위)
   createdAt: string;
   updatedAt: string;
 }
 
-export type WorkPatch = Partial<Pick<Work, "slug" | "title" | "kind" | "role" | "year" | "note" | "thumb" | "body" | "status">>;
+export type WorkPatch = Partial<Pick<Work, "slug" | "title" | "kind" | "role" | "year" | "note" | "thumb" | "body" | "status" | "pos">>;
 
 /** /portfolio 의 이력 부분. 사이트의 수정 모드에서 고친다. */
 export interface CvRow {

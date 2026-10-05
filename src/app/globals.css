@@ -1850,3 +1850,10 @@ input.cv-sub {
     transform: translate(var(--dx), var(--dy)) scale(1);
   }
 }
+
+.row.link .cv-handle {
+  left: -40px;
+}
+.row.dragging {
+  opacity: 0.35;
+}

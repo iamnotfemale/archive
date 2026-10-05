@@ -216,7 +216,7 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
         </div>
       )}
 
-      <PortfolioWorks works={works} writable={writable} editId={editId} hideAdd={editing} />
+      <PortfolioWorks works={works} writable={writable} editId={editId} hideAdd={editing} reorder={editing} />
 
       {/* contacts */}
       {(p.contacts.length > 0 || editing) && (

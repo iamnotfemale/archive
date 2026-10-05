@@ -39,6 +39,7 @@ type WorkRow = {
   thumb: string;
   body: string;
   status: string;
+  pos: number | null;
   created_at: Date | string;
   updated_at: Date | string;
 };
@@ -55,6 +56,7 @@ function rowToWork(r: WorkRow): Work {
     thumb: r.thumb,
     body: r.body,
     status: r.status === "published" ? "published" : "draft",
+    pos: r.pos ?? 0,
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
   };
@@ -62,7 +64,7 @@ function rowToWork(r: WorkRow): Work {
 
 /** Newest year first, then most recently edited. */
 function sortWorks(works: Work[]): Work[] {
-  return [...works].sort((a, b) => (b.year || "").localeCompare(a.year || "") || b.updatedAt.localeCompare(a.updatedAt));
+  return [...works].sort((a, b) => a.pos - b.pos || (b.year || "").localeCompare(a.year || "") || b.updatedAt.localeCompare(a.updatedAt));
 }
 
 type PostRow = {
@@ -182,6 +184,7 @@ async function pgStore(connection: string): Promise<Store> {
         updated_at timestamptz NOT NULL DEFAULT now()
       )`,
       )
+      .then(() => sql`ALTER TABLE works ADD COLUMN IF NOT EXISTS pos integer NOT NULL DEFAULT 0`)
       .then(
         () => sql`
       CREATE TABLE IF NOT EXISTS profile (
@@ -234,6 +237,7 @@ async function pgStore(connection: string): Promise<Store> {
           thumb = COALESCE(${patch.thumb ?? null}, thumb),
           body = COALESCE(${patch.body ?? null}, body),
           status = COALESCE(${patch.status ?? null}, status),
+          pos = COALESCE(${patch.pos ?? null}, pos),
           updated_at = now()
         WHERE id = ${id} RETURNING *`;
       return rows[0] ? rowToWork(rows[0]) : null;
@@ -402,6 +406,7 @@ const fileStore: Store = {
         thumb: "",
         body: "",
         status: "draft",
+        pos: 0,
         createdAt: now,
         updatedAt: now,
       };
@@ -418,6 +423,7 @@ const fileStore: Store = {
         const v = patch[k];
         if (v !== undefined) (w as unknown as Record<string, string>)[k] = v;
       }
+      if (patch.pos !== undefined) w.pos = patch.pos;
       w.updatedAt = new Date().toISOString();
       await writeWorks(works);
       return w;

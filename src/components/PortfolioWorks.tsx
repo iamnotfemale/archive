@@ -9,13 +9,14 @@ import WorkEditorSheet from "./WorkEditorSheet";
 const INK = "#1F1D1A";
 const INK_45 = "rgba(31,29,26,.45)";
 
-type Props = { works: Work[]; writable: boolean; editId?: string | null; hideAdd?: boolean };
+type Props = { works: Work[]; writable: boolean; editId?: string | null; hideAdd?: boolean; reorder?: boolean };
 
 /** "작업" 섹션 + 오른쪽 위 "+" + 목록 위에 떠오르는 편집기. */
-export default function PortfolioWorks({ works: initial, writable, editId = null, hideAdd = false }: Props) {
+export default function PortfolioWorks({ works: initial, writable, editId = null, hideAdd = false, reorder = false }: Props) {
   const router = useRouter();
   const [works, setWorks] = useState(initial);
   const [busy, setBusy] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Work | null>(() => (writable && editId ? initial.find((w) => w.id === editId) ?? null : null));
 
   // hover preview
@@ -81,6 +82,42 @@ export default function PortfolioWorks({ works: initial, writable, editId = null
   };
   const open = (w: Work) => (w.status === "draft" ? writable && openEditor(w) : router.push(`/portfolio/${w.slug}`));
 
+  /** Press the handle and move: the row follows the pointer; on release every row's pos is saved. */
+  const startDrag = (id: string, e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragId(id);
+    const onMove = (ev: PointerEvent) => {
+      const hit = [...document.querySelectorAll<HTMLElement>("[data-work]")].find((el) => {
+        const r = el.getBoundingClientRect();
+        return ev.clientY >= r.top && ev.clientY <= r.bottom;
+      });
+      const over = hit?.dataset.work;
+      if (!over || over === id) return;
+      setWorks((prev) => {
+        const a = prev.findIndex((w) => w.id === id);
+        const b = prev.findIndex((w) => w.id === over);
+        if (a < 0 || b < 0) return prev;
+        const next = [...prev];
+        const [item] = next.splice(a, 1);
+        next.splice(b, 0, item);
+        return next;
+      });
+    };
+    const onUp = () => {
+      setDragId(null);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      setWorks((prev) => {
+        const next = prev.map((w, i) => ({ ...w, pos: i + 1 }));
+        next.forEach((w) => void fetch(`/api/works/${w.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ pos: w.pos }) }));
+        return next;
+      });
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
   const shownWorks = writable ? works : works.filter((w) => w.status === "published");
   if (shownWorks.length === 0 && !writable) return null;
 
@@ -106,12 +143,19 @@ export default function PortfolioWorks({ works: initial, writable, editId = null
                 if (el) rowRefs.current.set(w.id, el);
                 else rowRefs.current.delete(w.id);
               }}
-              className={`row link${hover === w.id && shown ? " on" : ""}${w.status === "draft" ? " draft" : ""}`}
-              onMouseEnter={() => enter(w)}
+              data-work={w.id}
+              className={`row link${hover === w.id && shown ? " on" : ""}${w.status === "draft" ? " draft" : ""}${dragId === w.id ? " dragging" : ""}`}
+              onMouseEnter={() => !reorder && enter(w)}
               onMouseLeave={leave}
-              onClick={() => open(w)}
+              onClick={() => !reorder && open(w)}
             >
-              <span className="row-line" />
+              {reorder ? (
+                <span className="cv-handle" title="끌어서 순서 바꾸기" onPointerDown={(e) => startDrag(w.id, e)}>
+                  ≡
+                </span>
+              ) : (
+                <span className="row-line" />
+              )}
               <span className="row-title">{w.title || "제목 없음"}</span>
               {w.status === "draft" && <span className="row-meta domain">초안</span>}
               {w.kind && <span className="row-meta tagname">{w.kind}</span>}

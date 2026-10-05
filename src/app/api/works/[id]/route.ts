@@ -27,6 +27,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
   str("thumb", 2000);
   str("body", 200_000);
   if (body.status === "draft" || body.status === "published") patch.status = body.status;
+  if (typeof body.pos === "number" && Number.isFinite(body.pos)) patch.pos = Math.round(body.pos);
   if (body.slug !== undefined) {
     const slug = String(body.slug).trim().toLowerCase();
     if (!SLUG.test(slug)) return NextResponse.json({ error: "invalid_slug" }, { status: 400 });
