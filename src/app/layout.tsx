@@ -4,7 +4,7 @@ import InkSplash from "@/components/InkSplash";
 import Chrome from "@/components/Chrome";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.yeoziphab.com"),
+  metadataBase: new URL("https://me.yeoziphab.com"),
   title: { default: "yeoziphab", template: "%s — yeoziphab" },
   description: "A developer’s archive. Reads, builds, keeps.",
   openGraph: { siteName: "yeoziphab", type: "website", locale: "ko_KR" },
