@@ -4,8 +4,25 @@
     {
       "name": "archive",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "brand",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "D:/2026/BRAND",
+        "--",
+        "-p",
+        "3100"
+      ],
+      "port": 3100
     }
   ]
 }

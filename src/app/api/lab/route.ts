@@ -8,9 +8,9 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const store = await getStore();
-    return NextResponse.json((await store.getLab()) ?? seed);
+    return NextResponse.json((await store.getLab()) ?? seed, { headers: { "access-control-allow-origin": "*" } });
   } catch {
-    return NextResponse.json(seed);
+    return NextResponse.json(seed, { headers: { "access-control-allow-origin": "*" } });
   }
 }
 

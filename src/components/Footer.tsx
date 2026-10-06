@@ -16,6 +16,9 @@ export default function Footer() {
           </a>
         )}
         {mail && <a href={mail.href}>Mail</a>}
+        <a href="https://yeoziphab.com" target="_blank" rel="noreferrer">
+          yeoziphab.com ↗
+        </a>
         <a href="#top">Top ↑</a>
       </div>
     </footer>

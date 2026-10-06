@@ -7,7 +7,7 @@ import type { Profile, Work } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: { absolute: "yeoziphab" } };
+export const metadata = { title: { absolute: "Seungmin Yeo" } };
 
 export default async function PortfolioPage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
   const { edit } = await searchParams;

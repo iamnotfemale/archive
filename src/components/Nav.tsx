@@ -24,9 +24,7 @@ export default function Nav({ onSearch, onAdd, writable, extra }: { onSearch?: (
         <Link href="/write" className={is("/write") ? "on" : ""}>
           Writing
         </Link>
-        <Link href="/lab" className={is("/lab") ? "on" : ""}>
-          Lab
-        </Link>
+        <Link href="/#cv">About / CV</Link>
         {onSearch && (
           <a href="#search" onClick={(e) => (e.preventDefault(), onSearch())}>
             /

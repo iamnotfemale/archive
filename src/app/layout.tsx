@@ -5,9 +5,9 @@ import Chrome from "@/components/Chrome";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://me.yeoziphab.com"),
-  title: { default: "yeoziphab", template: "%s — yeoziphab" },
+  title: { default: "Seungmin Yeo", template: "%s — Seungmin Yeo" },
   description: "A developer’s archive. Reads, builds, keeps.",
-  openGraph: { siteName: "yeoziphab", type: "website", locale: "ko_KR" },
+  openGraph: { siteName: "Seungmin Yeo", type: "website", locale: "ko_KR" },
   twitter: { card: "summary_large_image" },
 };
 

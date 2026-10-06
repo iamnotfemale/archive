@@ -3,7 +3,7 @@
  */
 export const site = {
   /** 왼쪽 위 이름 (모든 페이지). */
-  name: "yeoziphab",
+  name: "Seungmin Yeo",
   /** 첫 화면과 /portfolio 맨 위 한 문장. */
   intro: "Hello World.",
   /** /portfolio 소개 아래 짧은 설명. */

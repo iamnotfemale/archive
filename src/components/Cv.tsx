@@ -176,7 +176,7 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
 
       <div className="wrap">
         {/* intro */}
-        <div className="g12 cv-intro">
+        <div id="cv" className="g12 cv-intro">
           {editing ? (
             <>
               <input className="cv-lead" value={p.intro} onChange={(e) => setP({ ...p, intro: e.target.value })} placeholder="한 문장" />

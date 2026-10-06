@@ -123,9 +123,9 @@ export default function WriteList({ posts: initial, items, labs, writable, editI
             <span>Writing</span>
             <span className="mute">{posts.length}</span>
           </a>
-          <Link href="/lab">
-            <span>Lab</span>
-            <span className="mute">{labs}</span>
+          <Link href="/#cv">
+            <span>About / CV</span>
+            <span className="mute">↗</span>
           </Link>
           <a href="#search" className="gap" onClick={(e) => (e.preventDefault(), setSearch(true))}>
             <span>Search</span>
