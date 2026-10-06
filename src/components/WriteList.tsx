@@ -6,7 +6,6 @@ import type { Post } from "@/lib/types";
 import { fullDate } from "@/lib/format";
 import { excerpt } from "@/lib/markdown";
 import Link from "next/link";
-import { lab } from "@/content/lab";
 import Bizcard, { tiltHandlers } from "./Bizcard";
 import Nav from "./Nav";
 import Dither from "./Dither";
@@ -19,7 +18,7 @@ const pad = (n: number) => String(n + 1).padStart(2, "0");
 const when = (p: Post) => p.publishedAt ?? p.updatedAt;
 const readMin = (body: string) => Math.max(1, Math.round(body.replace(/\s/g, "").length / 500));
 
-export default function WriteList({ posts: initial, items, writable, editId = null }: { posts: Post[]; items: number; writable: boolean; editId?: string | null }) {
+export default function WriteList({ posts: initial, items, labs, writable, editId = null }: { posts: Post[]; items: number; labs: number; writable: boolean; editId?: string | null }) {
   const router = useRouter();
   const [posts, setPosts] = useState(initial);
   const [editing, setEditing] = useState<Post | null>(() => (writable && editId ? initial.find((p) => p.id === editId) ?? null : null));
@@ -126,7 +125,7 @@ export default function WriteList({ posts: initial, items, writable, editId = nu
           </a>
           <Link href="/lab">
             <span>Lab</span>
-            <span className="mute">{lab.length}</span>
+            <span className="mute">{labs}</span>
           </Link>
           <a href="#search" className="gap" onClick={(e) => (e.preventDefault(), setSearch(true))}>
             <span>Search</span>

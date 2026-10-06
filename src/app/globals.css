@@ -2415,3 +2415,74 @@ button:hover,
     font-size: 36px;
   }
 }
+
+/* ---------- lab: hero flask + edit mode ---------- */
+.hero-canvas.flask {
+  transform: translateY(-58%) rotate(-6deg);
+}
+.lab-card.editable {
+  position: relative;
+  cursor: default;
+}
+.lab-card.editable input {
+  width: 100%;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 2px;
+  font: inherit;
+  color: inherit;
+  background: none;
+}
+.lab-card.editable input:focus {
+  border-color: var(--ink);
+}
+.lab-card.editable .lab-chrome .cv-handle,
+.lab-card.editable .lab-chrome .cv-x {
+  position: static;
+  transform: none;
+}
+.lab-card.editable .lab-chrome input.host {
+  flex: 1;
+  font-size: 11px;
+  border: 0;
+}
+.lab-card.editable .lab-tile {
+  align-content: center;
+  row-gap: 12px;
+}
+.lab-card.editable .lab-tile input.name {
+  font-size: 40px;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  text-align: center;
+  border: 0;
+}
+.lab-card.editable .lab-tile input.stack {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  width: calc(100% - 40px);
+  font-size: 11px;
+  color: var(--mute);
+  border: 0;
+}
+.lab-card.editable .lab-title input.t {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+.lab-card.editable .lab-title input.date {
+  width: 7ch;
+  font-size: 12px;
+  color: var(--mute);
+  text-align: right;
+}
+.lab-card.editable .lab-meta > div {
+  row-gap: 8px;
+}
+.lab-card.editable .lab-meta input {
+  font-size: 13px;
+  color: var(--mute);
+}
+.lab-card.dragging {
+  opacity: 0.35;
+}

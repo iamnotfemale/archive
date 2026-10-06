@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Item, ItemPatch, NewItem, Post, PostPatch, Profile, Work, WorkPatch } from "./types";
+import type { LabItem } from "@/content/lab";
 
 export interface Store {
   list(): Promise<Item[]>;
@@ -26,6 +27,8 @@ export interface Store {
 
   getProfile(): Promise<Profile | null>;
   setProfile(profile: Profile): Promise<Profile>;
+  getLab(): Promise<LabItem[] | null>;
+  setLab(items: LabItem[]): Promise<LabItem[]>;
 }
 
 type WorkRow = {
@@ -210,6 +213,15 @@ async function pgStore(connection: string): Promise<Store> {
         ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`;
       return profile;
     },
+    async getLab() {
+      const rows = await sql<{ data: LabItem[] }[]>`SELECT data FROM profile WHERE id = 'lab' LIMIT 1`;
+      return rows[0]?.data ?? null;
+    },
+    async setLab(items) {
+      await sql`INSERT INTO profile (id, data) VALUES ('lab', ${sql.json(items as unknown as Parameters<typeof sql.json>[0])})
+        ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`;
+      return items;
+    },
 
     async listWorks() {
       const rows = await sql<WorkRow[]>`SELECT * FROM works`;
@@ -374,6 +386,7 @@ async function writeWorks(works: Work[]) {
 }
 
 const PROFILE_FILE = path.join(process.cwd(), ".data", "profile.json");
+const LAB_FILE = path.join(process.cwd(), ".data", "lab.json");
 
 const fileStore: Store = {
   getProfile: () =>
@@ -389,6 +402,20 @@ const fileStore: Store = {
       await fs.mkdir(path.dirname(PROFILE_FILE), { recursive: true });
       await fs.writeFile(PROFILE_FILE, JSON.stringify(profile, null, 2), "utf8");
       return profile;
+    }),
+  getLab: () =>
+    locked(async () => {
+      try {
+        return JSON.parse(await fs.readFile(LAB_FILE, "utf8")) as LabItem[];
+      } catch {
+        return null;
+      }
+    }),
+  setLab: (items) =>
+    locked(async () => {
+      await fs.mkdir(path.dirname(LAB_FILE), { recursive: true });
+      await fs.writeFile(LAB_FILE, JSON.stringify(items, null, 2), "utf8");
+      return items;
     }),
 
   listWorks: () => locked(async () => sortWorks(await readWorks())),

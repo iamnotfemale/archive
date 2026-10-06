@@ -9,7 +9,6 @@ import { extractUrls } from "@/lib/url";
 import Dither from "./Dither";
 import Fields from "./Fields";
 import Footer from "./Footer";
-import { lab } from "@/content/lab";
 import Bizcard, { tiltHandlers } from "./Bizcard";
 import Nav from "./Nav";
 import { AddDrawer, SearchOverlay, type DrawerState } from "./Overlays";
@@ -17,7 +16,7 @@ import { AddDrawer, SearchOverlay, type DrawerState } from "./Overlays";
 const pad = (n: number) => String(n + 1).padStart(2, "0");
 const monthTitle = (k: string) => k.replace("-", " · ");
 
-export default function Home({ items: initial, posts, writable, locked }: { items: Item[]; posts: number; writable: boolean; locked: boolean }) {
+export default function Home({ items: initial, posts, labs, writable, locked }: { items: Item[]; posts: number; labs: number; writable: boolean; locked: boolean }) {
   const [items, setItems] = useState(initial);
   const [focus, setFocus] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
@@ -116,7 +115,7 @@ export default function Home({ items: initial, posts, writable, locked }: { item
           </Link>
           <Link href="/lab">
             <span>Lab</span>
-            <span className="mute">{lab.length}</span>
+            <span className="mute">{labs}</span>
           </Link>
           <a href="#search" className="gap" onClick={(e) => (e.preventDefault(), setSearch(true))}>
             <span>Search</span>
