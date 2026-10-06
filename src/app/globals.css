@@ -2010,3 +2010,18 @@ button:hover,
 .read-back:hover {
   color: var(--ac);
 }
+
+/* ---------- cv: grouped rows (dropdown) ---------- */
+.cv-group { position: relative; }
+.cv-row.group { cursor: pointer; }
+.cv-chev { display: inline-block; margin-left: 10px; font-size: 14px; opacity: 0.5; transition: opacity 0.2s; }
+.cv-row.group:hover .cv-chev { opacity: 1; }
+.cv-kids { animation: sw-rise 0.3s var(--ease) both; }
+.cv-row.sub { padding-left: 36px; border-top-color: transparent; }
+.cv-row.sub .cv-title { font-size: 15px; }
+.cv-row.sub .cv-sub-text { font-size: 13px; }
+.cv-row.sub::before { content: ""; position: absolute; left: 14px; top: 50%; width: 8px; height: 1px; background: var(--line); }
+.cv-row.sub:hover::before { background: #fff; }
+.cv-add.sub { padding-left: 36px; font-size: 11px; }
+.cv-group.editable .cv-row.sub { padding-left: 24px; }
+.cv-group.editable .cv-row:hover { background: none; color: inherit; }

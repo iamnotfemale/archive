@@ -25,6 +25,14 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
   const [save, setSave] = useState<"saved" | "dirty" | "saving" | "failed">("saved");
   const [drag, setDrag] = useState<Drag | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null); // id of the thing about to be removed
+  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set());
+  const toggle = (id: string) =>
+    setOpenIds((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   const lastSaved = useRef(JSON.stringify(initial));
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const createWork = useRef<() => void>(() => {});
@@ -74,6 +82,13 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
   /* ---------- edits ---------- */
   const setSection = (id: string, fn: (s: CvSection) => CvSection) => setP((x) => ({ ...x, sections: x.sections.map((s) => (s.id === id ? fn(s) : s)) }));
   const setRow = (sid: string, rid: string, patch: Partial<CvRow>) => setSection(sid, (s) => ({ ...s, rows: s.rows.map((r) => (r.id === rid ? { ...r, ...patch } : r)) }));
+  const setChildren = (sid: string, rid: string, fn: (rows: CvRow[]) => CvRow[]) => setSection(sid, (s) => ({ ...s, rows: s.rows.map((r) => (r.id === rid ? { ...r, rows: fn(r.rows ?? []) } : r)) }));
+  const setChild = (sid: string, rid: string, cid: string, patch: Partial<CvRow>) => setChildren(sid, rid, (rows) => rows.map((c) => (c.id === cid ? { ...c, ...patch } : c)));
+  const addChild = (sid: string, rid: string) => {
+    setChildren(sid, rid, (rows) => [...rows, { id: uid(), title: "", sub: "", when: "" }]);
+    setOpenIds((o) => new Set(o).add(rid));
+  };
+  const removeChild = (sid: string, rid: string, cid: string) => removeWithConfirm(cid, () => setChildren(sid, rid, (rows) => rows.filter((c) => c.id !== cid)));
   const addRow = (sid: string) => setSection(sid, (s) => ({ ...s, rows: [...s.rows, { id: uid(), title: "", sub: "", when: "" }] }));
   const addSection = () => setP((x) => ({ ...x, sections: [...x.sections, { id: uid(), label: "", rows: [{ id: uid(), title: "", sub: "", when: "" }] }] }));
   const setContact = (id: string, patch: Partial<Contact>) => setP((x) => ({ ...x, contacts: x.contacts.map((c) => (c.id === id ? { ...c, ...patch } : c)) }));
@@ -198,29 +213,68 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
               )}
             </div>
             <div className="c9">
-              {s.rows.map((r) => (
-                <div key={r.id} data-row={r.id} className={cls("cv-row", { kind: "row", section: s.id, id: r.id })}>
-                  {editing ? (
-                    <>
-                      <span className="cv-handle" title="끌어서 순서 바꾸기" onPointerDown={(e) => startDrag({ kind: "row", section: s.id, id: r.id }, e)}>
-                        ≡
-                      </span>
-                      <input className="cv-title" value={r.title} onChange={(e) => setRow(s.id, r.id, { title: e.target.value })} placeholder="이름" />
-                      <input className="cv-sub-text" value={r.sub} onChange={(e) => setRow(s.id, r.id, { sub: e.target.value })} placeholder="설명" />
-                      <input className="cv-when" value={r.when} onChange={(e) => setRow(s.id, r.id, { when: e.target.value })} placeholder="기간" />
-                      <span className="cv-x" onClick={() => removeRow(s.id, r.id)} style={{ color: confirm === r.id ? "var(--ac)" : undefined }}>
-                        {confirm === r.id ? "정말" : "×"}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="cv-title">{r.title}</span>
-                      <span className="cv-sub-text">{r.sub}</span>
-                      <span className="cv-when">{r.when}</span>
-                    </>
-                  )}
-                </div>
-              ))}
+              {s.rows.map((r) => {
+                const kids = r.rows ?? [];
+                const isGroup = kids.length > 0;
+                const isOpen = editing || openIds.has(r.id);
+                return (
+                  <div key={r.id} data-row={r.id} className={cls(`cv-group${isOpen && kids.length ? " open" : ""}`, { kind: "row", section: s.id, id: r.id })}>
+                    <div className={`cv-row${isGroup && !editing ? " group" : ""}`} onClick={() => !editing && kids.length && toggle(r.id)}>
+                      {editing ? (
+                        <>
+                          <span className="cv-handle" title="끌어서 순서 바꾸기" onPointerDown={(e) => startDrag({ kind: "row", section: s.id, id: r.id }, e)}>
+                            ≡
+                          </span>
+                          <input className="cv-title" value={r.title} onChange={(e) => setRow(s.id, r.id, { title: e.target.value })} placeholder="이름" />
+                          <input className="cv-sub-text" value={r.sub} onChange={(e) => setRow(s.id, r.id, { sub: e.target.value })} placeholder="설명" />
+                          <input className="cv-when" value={r.when} onChange={(e) => setRow(s.id, r.id, { when: e.target.value })} placeholder="기간" />
+                          <span className="cv-x" onClick={() => removeRow(s.id, r.id)} style={{ color: confirm === r.id ? "var(--ac)" : undefined }}>
+                            {confirm === r.id ? "정말" : "×"}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="cv-title">
+                            {r.title}
+                            {kids.length > 0 && <span className="cv-chev">{isOpen ? "−" : "+"}</span>}
+                          </span>
+                          <span className="cv-sub-text">{r.sub}</span>
+                          <span className="cv-when">{r.when}</span>
+                        </>
+                      )}
+                    </div>
+                    {isOpen && kids.length > 0 && (
+                      <div className="cv-kids">
+                        {kids.map((c) => (
+                          <div key={c.id} className={`cv-row sub${editing ? " editable" : ""}`}>
+                            {editing ? (
+                              <>
+                                <input className="cv-title" value={c.title} onChange={(e) => setChild(s.id, r.id, c.id, { title: e.target.value })} placeholder="이름" />
+                                <input className="cv-sub-text" value={c.sub} onChange={(e) => setChild(s.id, r.id, c.id, { sub: e.target.value })} placeholder="설명" />
+                                <input className="cv-when" value={c.when} onChange={(e) => setChild(s.id, r.id, c.id, { when: e.target.value })} placeholder="기간" />
+                                <span className="cv-x" onClick={() => removeChild(s.id, r.id, c.id)} style={{ color: confirm === c.id ? "var(--ac)" : undefined }}>
+                                  {confirm === c.id ? "정말" : "×"}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="cv-title">{c.title}</span>
+                                <span className="cv-sub-text">{c.sub}</span>
+                                <span className="cv-when">{c.when}</span>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {editing && (
+                      <div className="cv-add sub" onClick={() => addChild(s.id, r.id)}>
+                        + 하위 항목
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               {editing && (
                 <div className="cv-add" onClick={() => addRow(s.id)}>
                   + 항목

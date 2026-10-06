@@ -37,6 +37,16 @@ export async function PUT(req: Request) {
         title: str(r?.title, 120),
         sub: str(r?.sub, 200),
         when: str(r?.when, 40),
+        ...(Array.isArray(r?.rows) && r.rows.length
+          ? {
+              rows: r.rows.slice(0, 30).map((c, k) => ({
+                id: id(c?.id, `s${i + 1}r${j + 1}c${k + 1}`),
+                title: str(c?.title, 120),
+                sub: str(c?.sub, 200),
+                when: str(c?.when, 40),
+              })),
+            }
+          : {}),
       })),
     })),
     contacts: contacts.map((c, i) => ({ id: id(c?.id, `c${i + 1}`), label: str(c?.label, 40), value: str(c?.value, 120), href: str(c?.href, 500) })),

@@ -58,6 +58,7 @@ export interface CvRow {
   title: string;
   sub: string;
   when: string;
+  rows?: CvRow[]; // 하위 항목 (한 단계, 펼침/접힘)
 }
 export interface CvSection {
   id: string;
