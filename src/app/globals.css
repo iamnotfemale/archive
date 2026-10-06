@@ -1983,3 +1983,7 @@ input.cv-sub {
 .read-meta { display: flex; gap: 14px; align-items: baseline; font-size: 12px; color: var(--mute); }
 .read-meta .owner-actions { margin-left: 0; }
 @media (max-width: 900px) { .read-main { grid-column: 1 / -1; } }
+
+/* ---------- archive edit mode: rows open the drawer ---------- */
+.lrow.editing { cursor: pointer; }
+.lrow.editing .edit { opacity: 1; }

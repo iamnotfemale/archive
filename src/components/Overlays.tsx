@@ -7,8 +7,17 @@ import TagSuggest from "./TagSuggest";
 
 /* ---------- search: full-screen, instant ---------- */
 
-export function SearchOverlay({ items, onClose }: { items: Item[]; onClose: () => void }) {
+export function SearchOverlay({ items: given, onClose }: { items?: Item[]; onClose: () => void }) {
   const [q, setQ] = useState("");
+  const [fetched, setFetched] = useState<Item[]>([]);
+  useEffect(() => {
+    if (given) return;
+    fetch("/api/items")
+      .then((r) => r.json())
+      .then((j: { items?: Item[] } | Item[]) => setFetched(Array.isArray(j) ? j : (j.items ?? [])))
+      .catch(() => {});
+  }, [given]);
+  const items = given ?? fetched;
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     ref.current?.focus();

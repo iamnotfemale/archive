@@ -7,6 +7,7 @@ import Nav from "./Nav";
 import Dither from "./Dither";
 import Footer from "./Footer";
 import Card from "./Card";
+import { SearchOverlay } from "./Overlays";
 
 const num = (i: number) => `03.${i + 1}`;
 
@@ -20,6 +21,7 @@ const uid = () => Math.random().toString(36).slice(2, 8);
 export default function Cv({ profile: initial, works, writable, editId = null }: Props) {
   const [p, setP] = useState<Profile>(initial);
   const [editing, setEditing] = useState(false);
+  const [search, setSearch] = useState(false);
   const [save, setSave] = useState<"saved" | "dirty" | "saving" | "failed">("saved");
   const [drag, setDrag] = useState<Drag | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null); // id of the thing about to be removed
@@ -137,6 +139,7 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
     <div id="top" className={`cv-root${editing ? " editing" : ""}`}>
       <section className="pf-hero">
         <Nav
+          onSearch={() => setSearch(true)}
           onAdd={writable && !editing ? () => createWork.current() : undefined}
           writable={writable}
           extra={
@@ -283,6 +286,7 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
         )}
       </div>
       <Footer />
+      {search && <SearchOverlay onClose={() => setSearch(false)} />}
     </div>
   );
 }

@@ -21,6 +21,7 @@ export default function Home({ items: initial, posts, writable, locked }: { item
   const [focus, setFocus] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
   const [search, setSearch] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [note, setNote] = useState("");
   const tags = useMemo(() => distinctTags(items), [items]);
   const shown = focus ? items.filter((i) => i.tag === focus) : items;
@@ -87,7 +88,18 @@ export default function Home({ items: initial, posts, writable, locked }: { item
   return (
     <div id="top">
       <section className="hero" {...tiltHandlers}>
-        <Nav onSearch={() => setSearch(true)} onAdd={writable ? () => setDrawer({ mode: "add" }) : undefined} writable={writable} />
+        <Nav
+          onSearch={() => setSearch(true)}
+          onAdd={writable ? () => setDrawer({ mode: "add" }) : undefined}
+          writable={writable}
+          extra={
+            writable && (
+              <a href="#edit" className={editing ? "on" : ""} onClick={(e) => (e.preventDefault(), setEditing((v) => !v))}>
+                {editing ? "done" : "edit"}
+              </a>
+            )
+          }
+        />
         <Bizcard>
           <Link href="/">
             <span>Portfolio</span>
@@ -109,6 +121,12 @@ export default function Home({ items: initial, posts, writable, locked }: { item
             <a href="#add" onClick={(e) => (e.preventDefault(), setDrawer({ mode: "add" }))}>
               <span>Keep a link</span>
               <span className="mute">+</span>
+            </a>
+          )}
+          {writable && (
+            <a href="#edit" className={editing ? "on" : ""} onClick={(e) => (e.preventDefault(), setEditing((v) => !v))}>
+              <span>{editing ? "Done" : "Edit"}</span>
+              <span className="mute">{editing ? "✓" : "≡"}</span>
             </a>
           )}
         </Bizcard>
@@ -156,7 +174,18 @@ export default function Home({ items: initial, posts, writable, locked }: { item
               {rows.map((r) => {
                 const idx = n++;
                 return (
-                  <a key={r.id} href={r.url} target="_blank" rel="noreferrer" className="lrow">
+                  <a
+                    key={r.id}
+                    href={r.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`lrow${editing ? " editing" : ""}`}
+                    onClick={(e) => {
+                      if (!editing) return;
+                      e.preventDefault();
+                      setDrawer({ mode: "edit", item: r });
+                    }}
+                  >
                     <span className="n">{pad(idx)}</span>
                     <span className="t">{r.title}</span>
                     <span className="meta ell">{r.domain}</span>

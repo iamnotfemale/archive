@@ -10,6 +10,7 @@ import Bizcard, { tiltHandlers } from "./Bizcard";
 import Nav from "./Nav";
 import Dither from "./Dither";
 import Fields from "./Fields";
+import { SearchOverlay } from "./Overlays";
 import Footer from "./Footer";
 import EditorSheet from "./EditorSheet";
 
@@ -25,6 +26,7 @@ export default function WriteList({ posts: initial, items, writable, editId = nu
   const tags = useMemo(() => [...new Set(posts.map((p) => p.tag).filter(Boolean))], [posts]);
   const [reorder, setReorder] = useState(false);
   const [focus, setFocus] = useState<string | null>(null);
+  const [search, setSearch] = useState(false);
   const shown = focus ? posts.filter((p) => p.tag === focus) : posts;
   const [dragId, setDragId] = useState<string | null>(null);
 
@@ -97,6 +99,7 @@ export default function WriteList({ posts: initial, items, writable, editId = nu
     <div id="top">
       <section className="hero" {...tiltHandlers}>
         <Nav
+          onSearch={() => setSearch(true)}
           onAdd={writable && !reorder ? () => void newDraft() : undefined}
           writable={writable}
           extra={
@@ -120,15 +123,19 @@ export default function WriteList({ posts: initial, items, writable, editId = nu
             <span>Writing</span>
             <span className="mute">{posts.length}</span>
           </a>
+          <a href="#search" className="gap" onClick={(e) => (e.preventDefault(), setSearch(true))}>
+            <span>Search</span>
+            <span className="mute">/</span>
+          </a>
           {writable && (
-            <a href="#add" className="gap" onClick={(e) => (e.preventDefault(), void newDraft())}>
+            <a href="#add" onClick={(e) => (e.preventDefault(), void newDraft())}>
               <span>New draft</span>
               <span className="mute">+</span>
             </a>
           )}
           {writable && (
-            <a href="#edit" onClick={(e) => (e.preventDefault(), setReorder((r) => !r))}>
-              <span>{reorder ? "Done" : "Reorder"}</span>
+            <a href="#edit" className={reorder ? "on" : ""} onClick={(e) => (e.preventDefault(), setReorder((r) => !r))}>
+              <span>{reorder ? "Done" : "Edit"}</span>
               <span className="mute">{reorder ? "✓" : "≡"}</span>
             </a>
           )}
@@ -195,6 +202,7 @@ export default function WriteList({ posts: initial, items, writable, editId = nu
         {!shown.length && <p className="empty-note">Nothing written here yet.</p>}
       </div>
       <Footer />
+      {search && <SearchOverlay onClose={() => setSearch(false)} />}
       <div className={`veil editor-veil${editing ? " open" : ""}`} inert={!editing} onMouseDown={(e) => e.target === e.currentTarget && closeEditor()}>
         <div className="sheet editor-sheet">{editing && <EditorSheet key={editing.id} post={editing} tags={tags} onChange={(p) => setPosts((x) => x.map((y) => (y.id === p.id ? p : y)))} onClose={closeEditor} onDelete={(id) => (setPosts((x) => x.filter((y) => y.id !== id)), closeEditor())} />}</div>
       </div>
