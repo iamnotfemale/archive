@@ -29,6 +29,8 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
     focus: null as string | null,
     open: false,
     filling: false,
+    grab: null as null | { id: string; sx: number; sy: number; ox: number; oy: number; moved: boolean },
+    lastMoved: false,
   });
   useEffect(() => {
     const n = st.current.noise;
@@ -53,6 +55,17 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
   const byTag = (t: string) => items.filter((i) => i.tag === t);
   const leafId = (i: Item) => "L" + i.id;
 
+  const ripple = (e: { clientX: number; clientY: number }) => {
+    const el = box.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    [["var(--ac)", "0s"], ["var(--ink)", ".14s"]].forEach(([col, delay]) => {
+      const d = document.createElement("div");
+      d.style.cssText = `position:absolute;left:${e.clientX - r.left}px;top:${e.clientY - r.top}px;width:460px;height:460px;border-radius:50%;border:1px solid ${col};pointer-events:none;opacity:0;animation:sw-ripple .9s cubic-bezier(.2,.7,.2,1) ${delay} both`;
+      el.appendChild(d);
+      d.addEventListener("animationend", () => d.remove());
+    });
+  };
   useEffect(() => {
     const S = st.current;
     const mv = (e: MouseEvent) => {
@@ -63,8 +76,25 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
       m.py = e.clientY;
       m.x = e.clientX / innerWidth;
       m.y = e.clientY / innerHeight;
+      const g = S.grab;
+      if (g) {
+        if (!g.moved && Math.hypot(e.clientX - g.sx, e.clientY - g.sy) > 4) g.moved = true;
+        const n = S.sim[g.id];
+        if (g.moved && n) {
+          n.x = e.clientX - g.ox;
+          n.y = e.clientY - g.oy;
+          n.vx = n.vy = 0;
+        }
+      }
+    };
+    const up = () => {
+      if (!S.grab) return;
+      S.lastMoved = S.grab.moved;
+      S.grab = null;
+      document.body.style.userSelect = "";
     };
     window.addEventListener("mousemove", mv);
+    window.addEventListener("mouseup", up);
     let raf = 0;
     const homes = (W: number, H: number) => {
       const h: Record<string, [number, number]> = {};
@@ -167,6 +197,7 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
       }
       S.particles = ps;
       S.burstT = 0;
+      ripple({ clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 });
       w.style.transform = "translate(-50%,-50%) scale(1.15)";
       w.style.opacity = "0";
     };
@@ -217,10 +248,22 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
       const mx = S.mouse.px - r.left - panXY[0];
       const my = S.mouse.py - r.top - panXY[1];
       const ids = Object.keys(hs);
-      for (const id of ids) if (!sim[id]) sim[id] = { x: hs[id][0], y: hs[id][1], vx: 0, vy: 0 };
+      for (const id of ids) {
+        if (sim[id]) continue;
+        const src = f && id[0] === "L" ? sim[f] : null;
+        sim[id] = src ? { x: src.x, y: src.y, vx: 0, vy: 0 } : { x: hs[id][0], y: hs[id][1], vx: 0, vy: 0 };
+      }
       for (const id of ids) {
         const n = sim[id];
         const [hx, hy] = hs[id];
+        if (S.grab && S.grab.id === id && S.grab.moved) {
+          const node = el.querySelector<HTMLElement>(`[data-node="${CSS.escape(id)}"]`);
+          if (node) {
+            node.style.left = n.x + "px";
+            node.style.top = n.y + "px";
+          }
+          continue;
+        }
         n.vx += (hx - n.x) * 0.02;
         n.vy += (hy - n.y) * 0.02;
         const dx = n.x - mx;
@@ -277,21 +320,11 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("mousemove", mv);
+      window.removeEventListener("mouseup", up);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, tags]);
 
-  const ripple = (e: { clientX: number; clientY: number }) => {
-    const el = box.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    [["var(--ac)", "0s"], ["var(--ink)", ".14s"]].forEach(([col, delay]) => {
-      const d = document.createElement("div");
-      d.style.cssText = `position:absolute;left:${e.clientX - r.left}px;top:${e.clientY - r.top}px;width:460px;height:460px;border-radius:50%;border:1px solid ${col};pointer-events:none;opacity:0;animation:sw-ripple .9s cubic-bezier(.2,.7,.2,1) ${delay} both`;
-      el.appendChild(d);
-      d.addEventListener("animationend", () => d.remove());
-    });
-  };
   const fillSphere = (e: React.MouseEvent) => {
     e.preventDefault();
     if (filling) return;
@@ -318,7 +351,7 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
     tip.style.bottom = below ? "auto" : "20px";
   };
 
-  const note = !open ? "Fields, folded into one sphere" : focus ? `${focus} — ${byTag(focus).length} links · click the centre to fold back` : "Touch to disturb · click a field to unfold it";
+  const note = !open ? `${tags.length} fields, folded into one sphere` : focus ? `${focus} — ${byTag(focus).length} links · click the centre to fold back` : "Touch to disturb · click a field to unfold it";
   const edges = focus
     ? [...tags.map((k) => ({ a: "C", b: k, op: k === focus ? 0.9 : 0.12, dash: "" })), ...items.filter((i) => i.tag).map((l) => ({ a: l.tag, b: leafId(l), op: l.tag === focus ? 0.5 : 0.05, dash: "" }))]
     : [...tags.map((k) => ({ a: "C", b: k, op: 0.9, dash: "" })), ...tags.map((k, i) => ({ a: k, b: tags[(i + 1) % tags.length], op: 0.22, dash: "3 5" })), ...items.filter((i) => i.tag).map((l) => ({ a: l.tag, b: leafId(l), op: 0.14, dash: "" }))];
@@ -365,8 +398,23 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
                 href="#fields"
                 data-node={k}
                 className={`core${focus === k ? " on" : ""}${focus && focus !== k ? " off" : ""}`}
+                onMouseDown={(e) => {
+                  if (e.button !== 0) return;
+                  e.preventDefault();
+                  const S = st.current;
+                  const el = box.current;
+                  if (!el || !S.sim[k]) return;
+                  const r = el.getBoundingClientRect();
+                  const pan = focus ? [(0.5 - S.home[focus][0]) * r.width, (0.5 - S.home[focus][1]) * r.height] : [0, 0];
+                  S.grab = { id: k, sx: e.clientX, sy: e.clientY, ox: r.left + pan[0], oy: r.top + pan[1], moved: false };
+                  document.body.style.userSelect = "none";
+                }}
                 onClick={(e) => {
                   e.preventDefault();
+                  if (st.current.lastMoved) {
+                    st.current.lastMoved = false;
+                    return;
+                  }
                   ripple(e);
                   onFocus(focus === k ? null : k);
                 }}
