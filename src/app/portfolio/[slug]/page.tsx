@@ -36,11 +36,11 @@ export default async function WorkPage({ params }: Props) {
       <div className="wrap">
         <div className="g12 read-head">
           <div className="c3 read-side">
-            <Link href="/portfolio">← Portfolio</Link>
+            <Link href="/">← Portfolio</Link>
             {w.year && <span>{w.year}</span>}
             {w.kind && <span>{w.kind}</span>}
             {w.status === "draft" && <span style={{ color: "var(--ac)" }}>Draft</span>}
-            {writable && <OwnerActions editHref={`/portfolio?edit=${w.id}`} deleteUrl={`/api/works/${w.id}`} afterDelete="/portfolio" />}
+            {writable && <OwnerActions editHref={`/?edit=${w.id}`} deleteUrl={`/api/works/${w.id}`} afterDelete="/" />}
           </div>
           <h1>{w.title || "Untitled"}</h1>
         </div>

@@ -79,6 +79,7 @@ type PostRow = {
   created_at: Date | string;
   updated_at: Date | string;
   published_at: Date | string | null;
+  pos: number | null;
 };
 
 function rowToPost(r: PostRow): Post {
@@ -94,13 +95,14 @@ function rowToPost(r: PostRow): Post {
     createdAt: new Date(r.created_at).toISOString(),
     updatedAt: new Date(r.updated_at).toISOString(),
     publishedAt: r.published_at ? new Date(r.published_at).toISOString() : null,
+    pos: r.pos ?? 0,
   };
 }
 
 /** Newest first: published posts by publish date, drafts by last edit. */
 function sortPosts(posts: Post[]): Post[] {
   const key = (p: Post) => p.publishedAt ?? p.updatedAt;
-  return [...posts].sort((a, b) => key(b).localeCompare(key(a)));
+  return [...posts].sort((a, b) => (a.pos || 1e9) - (b.pos || 1e9) || key(b).localeCompare(key(a)));
 }
 
 /* ---------- Postgres (production) ---------- */
@@ -167,6 +169,7 @@ async function pgStore(connection: string): Promise<Store> {
       )`,
       )
       .then(() => sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS subtitle text NOT NULL DEFAULT ''`)
+      .then(() => sql`ALTER TABLE posts ADD COLUMN IF NOT EXISTS pos integer NOT NULL DEFAULT 0`)
       .then(
         () => sql`
       CREATE TABLE IF NOT EXISTS works (
@@ -276,6 +279,7 @@ async function pgStore(connection: string): Promise<Store> {
           tag = COALESCE(${patch.tag ?? null}, tag),
           status = COALESCE(${patch.status ?? null}, status),
           scope = COALESCE(${patch.scope ?? null}, scope),
+          pos = COALESCE(${patch.pos ?? null}, pos),
           updated_at = now(),
           published_at = CASE
             WHEN ${patch.status ?? null} = 'published' AND published_at IS NULL THEN now()
@@ -457,6 +461,7 @@ const fileStore: Store = {
         createdAt: now,
         updatedAt: now,
         publishedAt: null,
+        pos: 0,
       };
       posts.push(post);
       await writePosts(posts);
@@ -473,6 +478,7 @@ const fileStore: Store = {
       if (patch.body !== undefined) p.body = patch.body;
       if (patch.tag !== undefined) p.tag = patch.tag;
       if (patch.scope !== undefined) p.scope = patch.scope;
+      if (patch.pos !== undefined) p.pos = patch.pos;
       if (patch.status !== undefined) {
         if (patch.status === "published" && !p.publishedAt) p.publishedAt = new Date().toISOString();
         if (patch.status === "draft") p.publishedAt = null;

@@ -21,6 +21,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (body.tag !== undefined) patch.tag = String(body.tag).trim().slice(0, 40);
   if (body.status === "draft" || body.status === "published") patch.status = body.status;
   if (body.scope === "public" || body.scope === "unlisted") patch.scope = body.scope;
+  if (typeof body.pos === "number" && Number.isFinite(body.pos)) patch.pos = Math.round(body.pos);
   if (body.slug !== undefined) {
     const slug = String(body.slug).trim().toLowerCase();
     if (!SLUG.test(slug)) return NextResponse.json({ error: "invalid_slug" }, { status: 400 });

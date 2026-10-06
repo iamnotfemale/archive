@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Item } from "@/lib/types";
 import { dayLabel, monthKey } from "@/lib/format";
 import { distinctTags } from "@/lib/tags";
 import { extractUrls } from "@/lib/url";
-import { site } from "@/content/site";
 import Dither from "./Dither";
 import Fields from "./Fields";
 import Footer from "./Footer";
-import { Clock } from "./Nav";
+import Bizcard, { tiltHandlers } from "./Bizcard";
+import Nav from "./Nav";
 import { AddDrawer, SearchOverlay, type DrawerState } from "./Overlays";
 
 const pad = (n: number) => String(n + 1).padStart(2, "0");
@@ -22,7 +22,6 @@ export default function Home({ items: initial, posts, writable, locked }: { item
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
   const [search, setSearch] = useState(false);
   const [note, setNote] = useState("");
-  const card = useRef<HTMLDivElement>(null);
   const tags = useMemo(() => distinctTags(items), [items]);
   const shown = focus ? items.filter((i) => i.tag === focus) : items;
   const months = useMemo(() => {
@@ -83,65 +82,36 @@ export default function Home({ items: initial, posts, writable, locked }: { item
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [writable, drawer, search]);
 
-  const tilt = (e: React.MouseEvent) => {
-    const c = card.current;
-    if (!c) return;
-    const r = c.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width - 0.5;
-    const y = (e.clientY - r.top) / r.height - 0.5;
-    c.style.transform = Math.abs(x) < 1.2 && Math.abs(y) < 1.6 ? `perspective(900px) rotateX(${-y * 8}deg) rotateY(${x * 10}deg)` : "none";
-  };
-  const mail = site.contacts.find((c) => c.href.startsWith("mailto:"));
   let n = 0;
 
   return (
     <div id="top">
-      <section className="hero" onMouseMove={tilt} onMouseLeave={() => card.current && (card.current.style.transform = "none")}>
-        <div ref={card} className="bizcard">
-          <div>
-            <div className="name">{site.name}</div>
-            <div className="mute" style={{ marginTop: 4 }}>
-              Developer & student
-              <br />
-              Dept. of AI, Korea University
-            </div>
-          </div>
-          <nav>
-            <a href="#archive" className="on">
-              <span>Archive</span>
-              <span className="mute">{items.length}</span>
-            </a>
-            <Link href="/write">
-              <span>Writing</span>
-              <span className="mute">{posts}</span>
-            </Link>
-            <Link href="/portfolio">
-              <span>Portfolio</span>
-              <span className="mute">CV</span>
-            </Link>
-            <a href="#search" className="gap" onClick={(e) => (e.preventDefault(), setSearch(true))}>
-              <span>Search</span>
-              <span className="mute">/</span>
-            </a>
-            {writable && (
-              <a href="#add" onClick={(e) => (e.preventDefault(), setDrawer({ mode: "add" }))}>
-                <span>Keep a link</span>
-                <span className="mute">+</span>
-              </a>
-            )}
-          </nav>
-          <div style={{ gridColumn: 1, gridRow: 2, alignSelf: "end" }}>
-            <div className="sq" />
-          </div>
-          <div className="mute" style={{ gridColumn: 1, gridRow: 3 }}>
-            <Clock />
-          </div>
-          {mail && (
-            <a href={mail.href} style={{ gridColumn: 2, gridRow: 3, textAlign: "right" }}>
-              {mail.value}
+      <section className="hero" {...tiltHandlers}>
+        <Nav onSearch={() => setSearch(true)} onAdd={writable ? () => setDrawer({ mode: "add" }) : undefined} writable={writable} />
+        <Bizcard>
+          <Link href="/">
+            <span>Portfolio</span>
+            <span className="mute">CV</span>
+          </Link>
+          <a href="#archive" className="on">
+            <span>Archive</span>
+            <span className="mute">{items.length}</span>
+          </a>
+          <Link href="/write">
+            <span>Writing</span>
+            <span className="mute">{posts}</span>
+          </Link>
+          <a href="#search" className="gap" onClick={(e) => (e.preventDefault(), setSearch(true))}>
+            <span>Search</span>
+            <span className="mute">/</span>
+          </a>
+          {writable && (
+            <a href="#add" onClick={(e) => (e.preventDefault(), setDrawer({ mode: "add" }))}>
+              <span>Keep a link</span>
+              <span className="mute">+</span>
             </a>
           )}
-        </div>
+        </Bizcard>
         <Dither shape="circle" className="hero-canvas" />
         <h1>
           A developer’s archive<span className="ac">.</span>
@@ -158,7 +128,7 @@ export default function Home({ items: initial, posts, writable, locked }: { item
         </div>
       </section>
 
-      <Fields items={items} tags={tags} focus={focus} onFocus={setFocus} />
+      <Fields leaves={items.map((i) => ({ id: i.id, href: i.url, external: true, title: i.title, tag: i.tag, kind: i.domain, sub: i.memo || i.description.slice(0, 90), date: `kept ${dayLabel(i.createdAt)}` }))} tags={tags} focus={focus} onFocus={setFocus} />
 
       <section id="archive" className="wrap" style={{ paddingTop: 96 }}>
         <div className="g12 arch-head">

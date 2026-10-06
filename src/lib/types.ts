@@ -28,9 +28,10 @@ export interface Post {
   createdAt: string;
   updatedAt: string;
   publishedAt: string | null;
+  pos: number; // 목록 순서 (작을수록 위, 0 = 아직 정렬 안 함)
 }
 
-export type PostPatch = Partial<Pick<Post, "slug" | "title" | "subtitle" | "body" | "tag" | "status" | "scope">>;
+export type PostPatch = Partial<Pick<Post, "slug" | "title" | "subtitle" | "body" | "tag" | "status" | "scope" | "pos">>;
 
 /** 포트폴리오 작업. 본문은 글과 같은 마크다운. */
 export interface Work {

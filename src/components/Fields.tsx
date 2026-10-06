@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Item } from "@/lib/types";
-import { dayLabel } from "@/lib/format";
+import { BAYER, SHAPES } from "./Dither";
 
-const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+/** One dot in the graph: an archive link or an essay. */
+export type Leaf = { id: string; href: string; external?: boolean; title: string; tag: string; kind: string; sub?: string; date: string };
 type Node = { x: number; y: number; vx: number; vy: number };
 
 /** 태그(field)들을 구 하나로 접어 두었다가, 누르면 터져 나와 힘-그래프로 펼쳐진다. 노드는 실제 아카이브 항목. */
-export default function Fields({ items, tags, focus, onFocus }: { items: Item[]; tags: string[]; focus: string | null; onFocus: (t: string | null) => void }) {
+export default function Fields({ leaves: items, tags, focus, onFocus, shape = "circle", noun = "links" }: { leaves: Leaf[]; tags: string[]; focus: string | null; onFocus: (t: string | null) => void; shape?: "circle" | "cube"; noun?: string }) {
   const [open, setOpen] = useState(false);
   const [filling, setFilling] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -53,7 +53,7 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
   }, [tags]);
 
   const byTag = (t: string) => items.filter((i) => i.tag === t);
-  const leafId = (i: Item) => "L" + i.id;
+  const leafId = (i: Leaf) => "L" + i.id;
 
   const ripple = (e: { clientX: number; clientY: number }) => {
     const el = box.current;
@@ -148,12 +148,12 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
           const u = ((i + 0.5) / N) * 2 - 1;
           const v = ((j + 0.5) / N) * 2 - 1;
           const o = (j * N + i) * 4;
-          const z = u * u + v * v <= 0.92 ? Math.sqrt(1 - u * u - v * v) : -1;
-          if (z < 0) {
+          const nrm = SHAPES[shape](u, v);
+          if (!nrm) {
             d[o + 3] = 0;
             continue;
           }
-          const s = Math.max(0, (u * lx + v * ly + z * lz) / ln);
+          const s = Math.max(0, (nrm[0] * lx + nrm[1] * ly + nrm[2] * lz) / (ln * Math.hypot(nrm[0], nrm[1], nrm[2])));
           const val = Math.pow(s, 1.4) * 0.9 + Math.sin(u * 9 + t) * Math.cos(v * 9 - t) * 0.12 + 0.08;
           const on = val > (BAYER[(j % 4) * 4 + (i % 4)] + 0.5) / 16;
           const filled = S.fill > 0 && S.noise[j * N + i] < (S.fill * 3.3 - Math.hypot(u - S.fillC[0], v - S.fillC[1])) * 0.9;
@@ -323,7 +323,7 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
       window.removeEventListener("mouseup", up);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, tags]);
+  }, [items, tags, shape]);
 
   const fillSphere = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -351,7 +351,7 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
     tip.style.bottom = below ? "auto" : "20px";
   };
 
-  const note = !open ? `${tags.length} fields, folded into one sphere` : focus ? `${focus} — ${byTag(focus).length} links · click the centre to fold back` : "Touch to disturb · click a field to unfold it";
+  const note = !open ? `${tags.length} fields, folded into one ${shape === "cube" ? "cube" : "sphere"}` : focus ? `${focus} — ${byTag(focus).length} ${noun} · click the centre to fold back` : "Touch to disturb · click a field to unfold it";
   const edges = focus
     ? [...tags.map((k) => ({ a: "C", b: k, op: k === focus ? 0.9 : 0.12, dash: "" })), ...items.filter((i) => i.tag).map((l) => ({ a: l.tag, b: leafId(l), op: l.tag === focus ? 0.5 : 0.05, dash: "" }))]
     : [...tags.map((k) => ({ a: "C", b: k, op: 0.9, dash: "" })), ...tags.map((k, i) => ({ a: k, b: tags[(i + 1) % tags.length], op: 0.22, dash: "3 5" })), ...items.filter((i) => i.tag).map((l) => ({ a: l.tag, b: leafId(l), op: 0.14, dash: "" }))];
@@ -372,7 +372,7 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
               <canvas ref={sphere} width={80} height={80} />
             </a>
             <canvas ref={burst} className="burst" />
-            <div className="sphere-note">{filling ? "Filling…" : "Click the sphere to open the fields"}</div>
+            <div className="sphere-note">{filling ? "Filling…" : `Click the ${shape === "cube" ? "cube" : "sphere"} to open the fields`}</div>
           </>
         )}
         {open && (
@@ -427,20 +427,20 @@ export default function Fields({ items, tags, focus, onFocus }: { items: Item[];
               .map((l) => (
                 <a
                   key={l.id}
-                  href={l.url}
-                  target="_blank"
-                  rel="noreferrer"
+                  href={l.href}
+                  target={l.external ? "_blank" : undefined}
+                  rel={l.external ? "noreferrer" : undefined}
                   data-node={leafId(l)}
                   className={`leaf${!focus || l.tag !== focus ? " dim" : ""}${focus && l.tag !== focus ? " off" : ""}`}
                   onMouseEnter={(e) => placeTip(e.currentTarget)}
                 >
                   <span className="tip">
                     <span className="k">
-                      {l.tag} · {l.domain}
+                      {l.tag} · {l.kind}
                     </span>
                     <span className="t">{l.title}</span>
-                    {(l.memo || l.description) && <span className="d">{l.memo || l.description.slice(0, 90)}</span>}
-                    <span className="m">kept {dayLabel(l.createdAt)}</span>
+                    {l.sub && <span className="d">{l.sub}</span>}
+                    <span className="m">{l.date}</span>
                   </span>
                 </a>
               ))}

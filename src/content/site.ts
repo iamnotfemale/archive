@@ -11,7 +11,7 @@ export const site = {
   routes: [
     { href: "/archive", label: "/archive" },
     { href: "/write", label: "/write" },
-    { href: "/portfolio", label: "/portfolio" },
+    { href: "/", label: "/" },
   ],
   contacts: [
     { label: "이메일", value: "yeoziphab@korea.ac.kr", href: "mailto:yeoziphab@korea.ac.kr" },

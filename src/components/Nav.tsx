@@ -16,13 +16,13 @@ export default function Nav({ onSearch, onAdd, writable, extra }: { onSearch?: (
       </Link>
       <nav>
         <Link href="/" className={is("/") ? "on" : ""}>
+          Portfolio
+        </Link>
+        <Link href="/archive" className={is("/archive") ? "on" : ""}>
           Archive
         </Link>
         <Link href="/write" className={is("/write") ? "on" : ""}>
           Writing
-        </Link>
-        <Link href="/portfolio" className={is("/portfolio") ? "on" : ""}>
-          Portfolio
         </Link>
         {onSearch && (
           <a href="#search" onClick={(e) => (e.preventDefault(), onSearch())}>

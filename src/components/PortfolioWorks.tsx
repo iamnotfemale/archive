@@ -17,11 +17,11 @@ export default function PortfolioWorks({ works: initial, writable, editId = null
 
   const openEditor = (w: Work) => {
     setEditing(w);
-    window.history.replaceState(null, "", `/portfolio?edit=${w.id}`);
+    window.history.replaceState(null, "", `/?edit=${w.id}`);
   };
   const closeEditor = () => {
     setEditing(null);
-    window.history.replaceState(null, "", "/portfolio");
+    window.history.replaceState(null, "", "/");
   };
   useEffect(() => {
     document.body.style.overflow = editing ? "hidden" : "";

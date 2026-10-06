@@ -1969,3 +1969,7 @@ input.cv-sub {
 .flip { background: none; border: 0; cursor: pointer; font: inherit; }
 .card3d { cursor: grab; user-select: none; touch-action: none; }
 .card3d .face { box-sizing: border-box; }
+
+/* ---------- writing: reorder mode ---------- */
+.prow.editable { position: relative; cursor: default; }
+.prow.editable:hover { background: none; color: inherit; }

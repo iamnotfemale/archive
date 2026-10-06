@@ -2,10 +2,23 @@
 
 import { useEffect, useRef } from "react";
 
-const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-const SHAPES: Record<string, (u: number, v: number) => number> = {
-  circle: (u, v) => (u * u + v * v <= 0.92 ? Math.sqrt(1 - u * u - v * v) : -1),
-  square: (u, v) => (Math.abs(u) <= 0.86 && Math.abs(v) <= 0.86 ? 0.55 + (u - v) * 0.22 : -1),
+export const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+/** Each shape maps (u,v) in [-1,1]² to a surface normal, or null outside the silhouette. */
+export const SHAPES: Record<string, (u: number, v: number) => [number, number, number] | null> = {
+  circle: (u, v) => (u * u + v * v <= 0.92 ? [u, v, Math.sqrt(1 - u * u - v * v)] : null),
+  square: (u, v) => (Math.abs(u) <= 0.86 && Math.abs(v) <= 0.86 ? [u, v, 0.55 + (u - v) * 0.22] : null),
+  // isometric cube: hexagon silhouette; top rhombus + left and right faces, each with a flat normal
+  cube: (u, v) => {
+    const x = u / 0.9;
+    const y = v / 0.9;
+    const ax = Math.abs(x) / 0.866;
+    if (ax > 1) return null;
+    const top = -1 + ax * 0.5;
+    const bot = 1 - ax * 0.5;
+    if (y < top || y > bot) return null;
+    if (y < -ax * 0.5) return [0, -0.75, 0.66]; // top face
+    return x < 0 ? [-0.7, 0.3, 0.65] : [0.7, 0.3, 0.65]; // left / right face
+  },
 };
 
 /** Shared, lazily-smoothed mouse position in [0,1] — lights every dithered shape on the page. */
@@ -20,7 +33,7 @@ function bindMouse() {
 }
 
 /** Bayer-dithered 3D-lit shape (circle / square), or a dithered image (src), 72–112px grid upscaled with pixelated rendering. */
-export default function Dither({ shape = "circle", src, size = 72, className }: { shape?: "circle" | "square"; src?: string; size?: number; className?: string }) {
+export default function Dither({ shape = "circle", src, size = 72, className }: { shape?: "circle" | "square" | "cube"; src?: string; size?: number; className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     bindMouse();
@@ -80,12 +93,13 @@ export default function Dither({ shape = "circle", src, size = 72, className }: 
             const u = ((i + 0.5) / N) * 2 - 1;
             const v = ((j + 0.5) / N) * 2 - 1;
             const o = (j * N + i) * 4;
-            const z = f(u, v);
-            if (z < 0) {
+            const nrm = f(u, v);
+            if (!nrm) {
               d[o + 3] = 0;
               continue;
             }
-            const s = Math.max(0, (u * lx + v * ly + z * lz) / ln);
+            const nl = Math.hypot(nrm[0], nrm[1], nrm[2]);
+            const s = Math.max(0, (nrm[0] * lx + nrm[1] * ly + nrm[2] * lz) / (ln * nl));
             const noise = Math.sin(u * 9 + t) * Math.cos(v * 9 - t) * 0.12;
             const on = Math.pow(s, 1.4) * 0.9 + noise + 0.08 > (BAYER[(j % 4) * 4 + (i % 4)] + 0.5) / 16;
             d[o] = d[o + 1] = d[o + 2] = on ? 242 : 11;

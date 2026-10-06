@@ -50,7 +50,7 @@ export default async function PostPage({ params }: Props) {
           <h1>{post.title || "Untitled"}</h1>
         </div>
         <div className="g12 read-body">
-          <div className="c3 read-lede">{post.subtitle || excerpt(post.body)}</div>
+          <div className="c3 read-lede">{post.subtitle}</div>
           <div className="read-text">{renderBody(post.body)}</div>
         </div>
         {next && next.id !== post.id && (
