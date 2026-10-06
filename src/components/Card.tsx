@@ -1,59 +1,110 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { Profile } from "@/lib/types";
 import { site } from "@/content/site";
 
-/** Business card: drag to rotate, button to flip. */
+/** Business card: drag to tumble (both axes), inertia, settles back to the nearest face; button flips. */
 export default function Card({ profile }: { profile: Profile }) {
-  const [rot, setRot] = useState(0);
-  const [drag, setDrag] = useState(false);
-  const start = useRef<{ x: number; rot: number } | null>(null);
-  const onDown = (e: React.PointerEvent) => {
-    start.current = { x: e.clientX, rot };
-    setDrag(true);
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  const el = useRef<HTMLDivElement>(null);
+  const rot = useRef({ x: 0, y: 0, vx: 0, vy: 0, drag: false, face: 0, px: 0, py: 0 });
+
+  useEffect(() => {
+    const r = rot.current;
+    const move = (e: PointerEvent) => {
+      if (!r.drag) return;
+      r.vy = (e.clientX - r.px) * 0.5;
+      r.vx = -(e.clientY - r.py) * 0.5;
+      r.px = e.clientX;
+      r.py = e.clientY;
+      r.y += r.vy;
+      r.x += r.vx;
+    };
+    const up = () => (r.drag = false);
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    let raf = 0;
+    const step = () => {
+      raf = requestAnimationFrame(step);
+      if (!r.drag) {
+        r.x += r.vx;
+        r.y += r.vy;
+        r.vx *= 0.92;
+        r.vy *= 0.92;
+        r.x += (0 - r.x) * 0.035;
+        const ty = Math.round((r.y - r.face) / 360) * 360 + r.face;
+        r.y += (ty - r.y) * 0.035;
+      }
+      if (el.current) el.current.style.transform = `rotateX(${r.x}deg) rotateY(${r.y}deg)`;
+    };
+    step();
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  }, []);
+
+  const down = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const r = rot.current;
+    r.drag = true;
+    r.vx = r.vy = 0;
+    r.px = e.clientX;
+    r.py = e.clientY;
   };
-  const onMove = (e: React.PointerEvent) => start.current && setRot(start.current.rot + (e.clientX - start.current.x) * 0.5);
-  const onUp = () => {
-    if (!start.current) return;
-    start.current = null;
-    setDrag(false);
-    setRot((r) => Math.round(r / 180) * 180);
+  const flip = () => {
+    const r = rot.current;
+    r.face = r.face === 0 ? 180 : 0;
+    r.vx = r.vy = 0;
   };
+  const now = new Date();
+  const updated = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const link = (c: Profile["contacts"][number]) =>
+    c.href ? (
+      <a key={c.id} href={c.href} target={c.href.startsWith("mailto:") ? undefined : "_blank"} rel="noreferrer">
+        {c.value}
+      </a>
+    ) : (
+      <span key={c.id}>{c.value}</span>
+    );
+
   return (
     <div className="card-stage">
       <div>
-        <div className="card3d" style={{ transform: `rotateY(${rot}deg)`, transition: drag ? "none" : "transform .6s cubic-bezier(.2,.8,.2,1)" }} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
+        <div ref={el} className="card3d" onPointerDown={down}>
           <div className="face front">
-            <div className="name">{site.name}</div>
+            <div>
+              <div className="name">{site.name}</div>
+              <div className="mute" style={{ marginTop: 4 }}>
+                Developer &amp; student
+              </div>
+            </div>
             <div className="sq" />
-            <div className="bio">{profile.intro}</div>
-            <div className="mute">Seoul, KR</div>
-            <div className="mute">Drag to turn</div>
+            <div className="bio">Builds tools for reading and remembering. Runs two student communities at Korea University.</div>
+            <div className="mute" style={{ gridColumn: 1 }}>
+              Seoul, KR
+            </div>
+            <div className="mute" style={{ gridColumn: 2, textAlign: "right" }}>
+              Drag to turn
+            </div>
           </div>
           <div className="face back">
-            <div className="mute" style={{ color: "rgba(255,255,255,.5)" }}>
-              Contact
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ fontWeight: 600 }}>Contact</span>
+              <span style={{ opacity: 0.6 }}>Updated {updated}</span>
             </div>
-            <div className="links">
-              {profile.contacts.map((c) =>
-                c.href ? (
-                  <a key={c.id} href={c.href} target={c.href.startsWith("mailto:") ? undefined : "_blank"} rel="noreferrer">
-                    {c.label} · {c.value}
-                  </a>
-                ) : (
-                  <span key={c.id}>
-                    {c.label} · {c.value}
-                  </span>
-                ),
-              )}
+            <div className="links">{profile.contacts.map(link)}</div>
+            <div style={{ display: "flex", justifyContent: "space-between", opacity: 0.6 }}>
+              <span>Dept. of AI, Korea University</span>
+              <span>Seoul, KR</span>
             </div>
-            <div style={{ color: "rgba(255,255,255,.5)", fontSize: 12 }}>{site.name} · Seoul</div>
           </div>
         </div>
-        <button className="flip" onClick={() => setRot((r) => r + 180)}>
-          Flip <span style={{ color: "var(--ac)" }}>↻</span>
+        <button className="flip" onClick={flip} title="Flip">
+          <span style={{ fontSize: 16, lineHeight: 1 }}>⇄</span>Flip
         </button>
       </div>
     </div>
