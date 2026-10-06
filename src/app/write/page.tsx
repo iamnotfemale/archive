@@ -5,7 +5,7 @@ import type { Post } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "write" };
+export const metadata = { title: "writing" };
 
 export default async function WritePage({ searchParams }: { searchParams: Promise<{ edit?: string }> }) {
   const { edit } = await searchParams;

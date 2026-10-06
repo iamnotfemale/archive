@@ -4,8 +4,11 @@ import InkSplash from "@/components/InkSplash";
 import Chrome from "@/components/Chrome";
 
 export const metadata: Metadata = {
-  title: "archive",
-  description: "종이 한 장, 먹 한 색. 링크를 남기는 곳.",
+  metadataBase: new URL("https://yeoziphab.com"),
+  title: { default: "yeoziphab", template: "%s — yeoziphab" },
+  description: "A developer’s archive. Reads, builds, keeps.",
+  openGraph: { siteName: "yeoziphab", type: "website", locale: "ko_KR" },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
