@@ -142,9 +142,9 @@ export default function WriteList({ posts: initial, items, writable, editId = nu
         </Bizcard>
         <Dither shape="cube" className="hero-canvas" />
         <h1>
-          Writing<span className="ac">,</span>
+          Writing, mostly<span className="ac">.</span>
           <br />
-          <span className="sub">mostly about building and remembering.</span>
+          <span className="sub">Building and remembering.</span>
         </h1>
         <div className="hero-foot">
           <a href="#fields" className="btn-pill">
