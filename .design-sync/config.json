@@ -1,0 +1,33 @@
+{
+  "projectId": "672f2a49-10d1-4fca-a742-7ac60b6efdc0",
+  "shape": "package",
+  "pkg": "yeoziphab-ds",
+  "globalName": "YeoziphabDS",
+  "buildCmd": "cd ds && node build.mjs",
+  "cssEntry": "dist/styles.css",
+  "srcDir": "src",
+  "overrides": {
+    "Corner": {
+      "cardMode": "column"
+    },
+    "Field": {
+      "cardMode": "column"
+    },
+    "Month": {
+      "cardMode": "column"
+    },
+    "Note": {
+      "cardMode": "column"
+    },
+    "Rail": {
+      "cardMode": "column"
+    },
+    "Row": {
+      "cardMode": "column"
+    },
+    "Veil": {
+      "cardMode": "column"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}

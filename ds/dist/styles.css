@@ -1,0 +1,401 @@
+/* yeoziphab — 종이 #F4F1EA · 먹 #1F1D1A · 선 #D9D4CA. 색은 셋뿐, 보조는 먹의 불투명도로. */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400&display=swap");
+
+:root {
+  --paper: #f4f1ea;
+  --paper-deep: #e4e0d6;
+  --paper-deeper: #ddd8cd;
+  --ink: #1f1d1a;
+  --ink-soft: rgba(31, 29, 26, 0.74);
+  --ink-60: rgba(31, 29, 26, 0.6);
+  --ink-55: rgba(31, 29, 26, 0.55);
+  --ink-50: rgba(31, 29, 26, 0.5);
+  --ink-45: rgba(31, 29, 26, 0.45);
+  --ink-42: rgba(31, 29, 26, 0.42);
+  --ink-38: rgba(31, 29, 26, 0.38);
+  --ink-35: rgba(31, 29, 26, 0.35);
+  --line: #d9d4ca;
+  --sans: Pretendard, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Noto Serif KR", serif;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.yz,
+.yz * {
+  box-sizing: border-box;
+}
+.yz {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+.yz input,
+.yz textarea {
+  font: inherit;
+  color: var(--ink);
+  caret-color: var(--ink);
+  border: 0;
+  outline: 0;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+.yz input::placeholder,
+.yz textarea::placeholder {
+  color: var(--ink-38);
+}
+.yz a {
+  color: inherit;
+  text-decoration: none;
+}
+@keyframes yz-rise {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- rail (name · routes · page-specific) ---------- */
+.yz-rail {
+  width: 240px;
+}
+.yz-wordmark {
+  display: block;
+  font-size: 14px;
+  letter-spacing: 0.16em;
+  line-height: 1;
+}
+.yz-routes {
+  margin-top: 26px;
+  display: flex;
+  flex-direction: column;
+}
+.yz-route {
+  font-size: 12px;
+  line-height: 2.3;
+  letter-spacing: 0.08em;
+  color: var(--ink-45);
+  cursor: pointer;
+  transition: color 0.25s var(--ease);
+}
+.yz-route:hover,
+.yz-route.active {
+  color: var(--ink);
+}
+.yz-rail-body {
+  margin-top: 48px;
+}
+.yz-note {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-60);
+}
+.yz-sub {
+  margin-top: 6px;
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-42);
+  line-height: 1.6;
+}
+
+/* ---------- tags ---------- */
+.yz-tags {
+  display: flex;
+  flex-direction: column;
+}
+.yz-tag {
+  font-size: 12px;
+  line-height: 2.3;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  color: var(--ink-55);
+  transition: color 0.25s var(--ease);
+  user-select: none;
+}
+.yz-tag:hover,
+.yz-tag.active {
+  color: var(--ink);
+}
+
+/* ---------- corner glyph (+ / edit) ---------- */
+.yz-corner {
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-block;
+  user-select: none;
+  color: var(--ink);
+  transition: transform 0.3s var(--ease), color 0.25s var(--ease);
+}
+.yz-corner.text {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  line-height: 22px;
+}
+.yz-corner.dim {
+  color: var(--ink-45);
+}
+.yz-corner.slash.open {
+  transform: rotate(24deg);
+}
+.yz-corner.slash:hover {
+  transform: rotate(10deg);
+}
+.yz-corner.plus.open {
+  transform: rotate(45deg);
+}
+
+/* ---------- list row ---------- */
+.yz-row {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 22px;
+  padding: 13px 0;
+  cursor: pointer;
+  animation: yz-rise 0.45s var(--ease) both;
+}
+.yz-row-line {
+  position: absolute;
+  left: -40px;
+  top: 50%;
+  height: 1px;
+  width: 0;
+  background: var(--ink);
+  transition: width 0.3s var(--ease);
+}
+.yz-row:hover .yz-row-line,
+.yz-row.on .yz-row-line {
+  width: 22px;
+}
+.yz-row-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink-soft);
+  transition: color 0.25s var(--ease);
+}
+.yz-row:hover .yz-row-title,
+.yz-row.on .yz-row-title {
+  color: var(--ink);
+}
+.yz-row-meta {
+  font-size: 12px;
+  color: var(--ink-50);
+  white-space: nowrap;
+  letter-spacing: 0.06em;
+  transition: color 0.25s var(--ease);
+}
+.yz-row-meta.serif {
+  font-family: var(--serif);
+  letter-spacing: 0.02em;
+}
+.yz-row:hover .yz-row-meta {
+  color: rgba(31, 29, 26, 0.8);
+}
+.yz-month {
+  font-family: var(--serif);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--ink-55);
+  line-height: 20px;
+}
+.yz-month-line {
+  height: 1px;
+  background: var(--line);
+  margin: 10px 0 0;
+}
+.yz-month-rows {
+  padding-top: 30px;
+}
+
+/* ---------- field (underlined input) ---------- */
+.yz-field {
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+.yz-field.lg {
+  padding: 0 0 14px;
+}
+.yz-field.lg input {
+  font-size: 20px;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+}
+.yz-field.md {
+  padding-bottom: 12px;
+}
+.yz-field.md input {
+  font-size: 15px;
+  line-height: 1.5;
+}
+.yz-field.sm {
+  padding-bottom: 10px;
+}
+.yz-field.sm input {
+  font-size: 13px;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+}
+.yz-action {
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: color 0.25s var(--ease);
+}
+.yz-action.dim {
+  color: var(--ink-35);
+  cursor: default;
+}
+.yz-link {
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: transparent;
+  text-underline-offset: 6px;
+  transition: text-decoration-color 0.25s var(--ease);
+  user-select: none;
+}
+.yz-link:hover {
+  text-decoration-color: var(--ink);
+}
+.yz-hint {
+  font-family: var(--serif);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-42);
+  cursor: pointer;
+}
+.yz-hint:hover {
+  color: var(--ink);
+}
+
+/* ---------- veil + sheet ---------- */
+.yz-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 32px;
+  background: rgba(244, 241, 234, 0.55);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease);
+}
+.yz-veil.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.yz-sheet {
+  width: 640px;
+  max-width: 100%;
+  transform: translateY(6px);
+  transition: transform 0.35s var(--ease);
+}
+.yz-veil.open .yz-sheet {
+  transform: none;
+}
+
+/* ---------- reading ---------- */
+.yz-title {
+  margin: 0;
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.45;
+  letter-spacing: -0.018em;
+  text-wrap: pretty;
+}
+.yz-subtitle {
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--ink-60);
+}
+.yz-meta {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  font-family: var(--serif);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--ink-50);
+}
+.yz-p {
+  margin: 0 0 28px;
+  font-size: 15px;
+  line-height: 2.05;
+  letter-spacing: -0.003em;
+  color: #2a2722;
+  text-wrap: pretty;
+}
+.yz-lead {
+  font-size: 24px;
+  line-height: 1.6;
+  letter-spacing: -0.012em;
+  text-wrap: pretty;
+}
+.yz-cv-label {
+  font-family: var(--serif);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--ink-55);
+}
+.yz-cv-line {
+  height: 1px;
+  background: var(--line);
+  margin: 0 0 26px;
+}
+.yz-cv-row {
+  display: flex;
+  align-items: baseline;
+  gap: 22px;
+  padding: 13px 0;
+}
+.yz-cv-title {
+  font-size: 15px;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+  color: rgba(31, 29, 26, 0.85);
+}
+.yz-cv-sub {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--ink-55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.yz-cv-when {
+  font-family: var(--serif);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--ink-50);
+  white-space: nowrap;
+}
