@@ -1987,3 +1987,26 @@ input.cv-sub {
 /* ---------- archive edit mode: rows open the drawer ---------- */
 .lrow.editing { cursor: pointer; }
 .lrow.editing .edit { opacity: 1; }
+
+/* ---------- cursor: the green dot replaces the native cursor everywhere; clickables go green ---------- */
+@media (hover: hover) and (pointer: fine) {
+  *,
+  *::before,
+  *::after {
+    cursor: none !important;
+  }
+}
+button:hover,
+[role="button"]:hover,
+.cv-add:hover,
+.cv-x:hover,
+.cv-handle:hover,
+.owner-actions > *:hover,
+.flip:hover,
+.corner:hover,
+.action:hover,
+.ulink:hover,
+.srow:hover,
+.read-back:hover {
+  color: var(--ac);
+}
