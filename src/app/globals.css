@@ -335,7 +335,7 @@ textarea::placeholder {
   bottom: 76px;
   margin: 0;
   font-weight: 500;
-  font-size: min(9.6vw, 164px);
+  font-size: min(9.6vw, 164px, 15vh);
   line-height: 0.98;
   letter-spacing: -0.045em;
   z-index: 2;

@@ -144,7 +144,7 @@ export default function WriteList({ posts: initial, items, writable, editId = nu
         <h1>
           Writing, mostly<span className="ac">.</span>
           <br />
-          <span className="sub">Building and remembering.</span>
+          <span className="sub">Builds, remembers.</span>
         </h1>
         <div className="hero-foot">
           <a href="#fields" className="btn-pill">
