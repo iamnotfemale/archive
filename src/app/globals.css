@@ -2025,3 +2025,232 @@ button:hover,
 .cv-add.sub { padding-left: 36px; font-size: 11px; }
 .cv-group.editable .cv-row.sub { padding-left: 24px; }
 .cv-group.editable .cv-row:hover { background: none; color: inherit; }
+
+/* ---------- green on dark: brighter accent wherever the surface is ink ---------- */
+.drawer,
+.card3d .back,
+.lrow:hover,
+.prow:hover,
+.cv-row:hover,
+.read-next a:hover,
+.core:hover,
+.btn-pill,
+.search-ov .srow:hover {
+  --ac: #3fe281;
+}
+.sw-cursor {
+  mix-blend-mode: normal;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.75);
+}
+.sw-cursor.over {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6);
+  border-color: var(--ac);
+}
+
+/* ---------- mobile ---------- */
+@media (max-width: 720px) {
+  .wrap,
+  .foot,
+  .pf-foot,
+  .hero-foot {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .nav {
+    padding: 16px 16px 0;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+  }
+  .nav .brand {
+    margin-right: auto;
+  }
+  .nav nav {
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  /* hero: everything flows top to bottom instead of being pinned */
+  .hero {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    padding-bottom: 8px;
+  }
+  .bizcard {
+    position: relative;
+    left: auto;
+    top: auto;
+    width: auto;
+    aspect-ratio: auto;
+    margin: 20px 16px 0;
+    padding: 20px;
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    row-gap: 14px;
+  }
+  .bizcard > * {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    text-align: left !important;
+  }
+  .bizcard nav {
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .hero-canvas {
+    position: relative;
+    right: auto;
+    top: auto;
+    transform: none;
+    width: 58vw;
+    height: 58vw;
+    margin: 28px auto 0;
+    display: block;
+  }
+  .hero h1 {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    padding: 28px 16px 0;
+    font-size: 42px;
+  }
+  .hero-foot {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    padding-top: 22px;
+    padding-bottom: 16px;
+  }
+
+  /* portfolio hero */
+  .pf-hero {
+    height: auto;
+    min-height: 0;
+  }
+  .card-stage {
+    position: relative;
+    inset: auto;
+    padding: 28px 0 8px;
+  }
+  .card3d .face {
+    padding: 20px;
+    font-size: 13px;
+  }
+  .card3d .front .name {
+    font-size: 19px;
+  }
+  .card3d .front .bio {
+    max-width: none;
+  }
+  .card3d .back .links {
+    font-size: 16px;
+  }
+  .dove {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: 62vw;
+    height: 62vw;
+    margin: 0 auto;
+    display: block;
+  }
+  .pf-foot {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    padding-top: 16px;
+    padding-bottom: 20px;
+  }
+
+  /* sections */
+  .field-box {
+    height: 440px;
+  }
+  .sec-title {
+    font-size: 24px;
+  }
+  .cv-intro {
+    padding: 48px 0 24px;
+  }
+  .cv-block {
+    padding-bottom: 28px;
+  }
+  .cv-label {
+    margin-bottom: 8px;
+  }
+  .cv-title {
+    font-size: 16px;
+  }
+  .cv-row.sub {
+    padding-left: 24px;
+  }
+  .cv-row.sub::before {
+    left: 8px;
+  }
+  .prow .ptitle {
+    font-size: 24px;
+  }
+
+  /* reading */
+  .read-head {
+    margin-top: 56px;
+    padding-bottom: 28px;
+  }
+  .read-head h1 {
+    font-size: 34px;
+  }
+  .read-sub {
+    font-size: 16px;
+  }
+  .read-meta {
+    flex-wrap: wrap;
+    gap: 6px 14px;
+  }
+  .read-body {
+    padding-top: 28px;
+  }
+  .read-text {
+    font-size: 17px;
+  }
+  .read-next a {
+    font-size: 22px;
+  }
+
+  /* overlays */
+  .drawer {
+    width: 100vw;
+    padding: 20px 16px;
+  }
+  .search-ov {
+    padding: 16px;
+  }
+  .search-ov input {
+    margin-top: 8vh;
+    font-size: 40px;
+  }
+  .foot {
+    margin-top: 72px;
+  }
+}
+@media (max-width: 720px) {
+  .pf-hero {
+    display: flex;
+    flex-direction: column;
+  }
+  .pf-hero .nav {
+    order: 0;
+  }
+  .pf-hero .card-stage {
+    order: 1;
+  }
+  .pf-hero .dove {
+    order: 2;
+    margin-top: 8px;
+  }
+  .pf-hero .pf-foot {
+    order: 3;
+  }
+}
