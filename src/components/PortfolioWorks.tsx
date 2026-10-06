@@ -1,51 +1,21 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Work } from "@/lib/types";
-import { firstImage } from "@/lib/markdown";
 import WorkEditorSheet from "./WorkEditorSheet";
 
-const INK = "#1F1D1A";
-const INK_45 = "rgba(31,29,26,.45)";
+type Props = { works: Work[]; writable: boolean; editId?: string | null; reorder?: boolean; no: string; createRef: React.RefObject<() => void> };
 
-type Props = { works: Work[]; writable: boolean; editId?: string | null; hideAdd?: boolean; reorder?: boolean };
-
-/** "작업" 섹션 + 오른쪽 위 "+" + 목록 위에 떠오르는 편집기. */
-export default function PortfolioWorks({ works: initial, writable, editId = null, hideAdd = false, reorder = false }: Props) {
+/** "Works" block of the CV; the + in the nav creates, rows open the editor (drafts) or the page. */
+export default function PortfolioWorks({ works: initial, writable, editId = null, reorder = false, no, createRef }: Props) {
   const router = useRouter();
   const [works, setWorks] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Work | null>(() => (writable && editId ? initial.find((w) => w.id === editId) ?? null : null));
 
-  // hover preview
-  const [hover, setHover] = useState<string | null>(null);
-  const [leaving, setLeaving] = useState(false);
-  const [top, setTop] = useState(0);
-  const listRef = useRef<HTMLDivElement>(null);
-  const rowRefs = useRef(new Map<string, HTMLDivElement>());
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  const enter = (w: Work) => {
-    clearTimeout(timer.current);
-    const el = rowRefs.current.get(w.id);
-    const list = listRef.current;
-    if (el && list) setTop(el.getBoundingClientRect().top - list.getBoundingClientRect().top);
-    setHover(w.id);
-    setLeaving(false);
-  };
-  const leave = () => {
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => setLeaving(true), 160);
-  };
-  const hv = hover ? works.find((w) => w.id === hover) ?? null : null;
-  const thumbOf = (w: Work) => w.thumb || firstImage(w.body);
-  const shown = !!hv && !leaving;
-
-  /* ---------- editor overlay ---------- */
   const openEditor = (w: Work) => {
-    setHover(null);
     setEditing(w);
     window.history.replaceState(null, "", `/portfolio?edit=${w.id}`);
   };
@@ -75,6 +45,9 @@ export default function PortfolioWorks({ works: initial, writable, editId = null
       setBusy(false);
     }
   };
+  useEffect(() => {
+    createRef.current = () => void create();
+  });
   const onChange = (w: Work) => setWorks((prev) => prev.map((x) => (x.id === w.id ? w : x)));
   const onDelete = (id: string) => {
     setWorks((prev) => prev.filter((x) => x.id !== id));
@@ -123,75 +96,33 @@ export default function PortfolioWorks({ works: initial, writable, editId = null
 
   return (
     <>
-      {writable && !hideAdd && (
-        <div className="corner plus" title="새 작업" style={{ transform: editing ? "rotate(45deg)" : "none", color: busy || editing ? INK_45 : INK }} onClick={() => (editing ? closeEditor() : void create())}>
-          +
+      <section className="g12 cv-block">
+        <div className="c3 cv-label">
+          <span className="no">{no}</span>
+          <span className="lbl">Works</span>
         </div>
-      )}
-
-      <section className="grid cv-block" ref={listRef} style={{ position: "relative" }}>
-        <div>
-          <div className="cv-label">작업</div>
-        </div>
-        <div>
-          <div className="cv-line" />
-          {shownWorks.length === 0 && <div className="cv-note">오른쪽 위 + 로 첫 작업을 남기세요.</div>}
+        <div className="c9">
+          {shownWorks.length === 0 && <p className="empty-note">Press + to add the first work.</p>}
           {shownWorks.map((w) => (
             <div
               key={w.id}
-              ref={(el) => {
-                if (el) rowRefs.current.set(w.id, el);
-                else rowRefs.current.delete(w.id);
-              }}
               data-work={w.id}
-              className={`row link${hover === w.id && shown ? " on" : ""}${w.status === "draft" ? " draft" : ""}${dragId === w.id ? " dragging" : ""}`}
-              onMouseEnter={() => !reorder && enter(w)}
-              onMouseLeave={leave}
+              className={`cv-row${reorder ? " editable" : " link"}${dragId === w.id ? " dragging" : ""}`}
               onClick={() => !reorder && open(w)}
             >
-              {reorder ? (
+              {reorder && (
                 <span className="cv-handle" title="끌어서 순서 바꾸기" onPointerDown={(e) => startDrag(w.id, e)}>
                   ≡
                 </span>
-              ) : (
-                <span className="row-line" />
               )}
-              <span className="row-title">{w.title || "제목 없음"}</span>
-              {w.status === "draft" && <span className="row-meta domain">초안</span>}
-              {w.kind && <span className="row-meta tagname">{w.kind}</span>}
-              <span className="row-meta date">{w.year}</span>
+              <span className="cv-title">{w.title || "Untitled"}</span>
+              <span className="cv-sub-text">
+                {w.status === "draft" && <span style={{ color: "var(--ac)" }}>Draft · </span>}
+                {w.note || w.kind}
+              </span>
+              <span className="cv-when">{w.year}</span>
             </div>
           ))}
-        </div>
-        <div />
-
-        <div
-          className="work-preview"
-          onMouseEnter={() => clearTimeout(timer.current)}
-          onMouseLeave={leave}
-          onClick={() => hv && open(hv)}
-          style={{
-            top,
-            opacity: shown ? 1 : 0,
-            transform: shown ? "translateY(0)" : "translateY(4px)",
-            transition: shown ? "opacity .35s ease-out, transform .35s ease-out" : "opacity .18s ease-out, transform .18s ease-out",
-            visibility: shown ? "visible" : "hidden",
-          }}
-        >
-          {hv && (
-            <>
-              <div className="thumb" style={{ height: 150 }}>
-                {thumbOf(hv) ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={thumbOf(hv)} alt="" />
-                ) : (
-                  <span>이미지</span>
-                )}
-              </div>
-              <div className="work-note">{hv.note}</div>
-              <div className="pv-url">/portfolio/{hv.slug} ↗</div>
-            </>
-          )}
         </div>
       </section>
 

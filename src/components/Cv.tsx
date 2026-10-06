@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Contact, CvRow, CvSection, Profile, Work } from "@/lib/types";
 import PortfolioWorks from "./PortfolioWorks";
+import Nav from "./Nav";
+import Dither from "./Dither";
+import Footer from "./Footer";
+import Card from "./Card";
+
+const num = (i: number) => `03.${i + 1}`;
 
 type Props = { profile: Profile; works: Work[]; writable: boolean; editId?: string | null };
 
@@ -19,6 +25,7 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
   const [confirm, setConfirm] = useState<string | null>(null); // id of the thing about to be removed
   const lastSaved = useRef(JSON.stringify(initial));
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const createWork = useRef<() => void>(() => {});
 
   /* ---------- autosave (whole document), 900ms after the last change ---------- */
   const flush = useCallback(async () => {
@@ -127,18 +134,31 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
   const cls = (base: string, d: Drag) => `${base}${editing ? " editable" : ""}${drag && drag.kind === d.kind && drag.id === d.id ? " dragging" : ""}`;
 
   return (
-    <div className={`cv-root${editing ? " editing" : ""}`}>
-      {writable && (
-        <div className="corner edit-toggle" title={editing ? "완료" : "수정"} onClick={() => (editing ? void done() : setEditing(true))}>
-          {editing ? "done" : "edit"}
-          {editing && <span className="corner-sub">{savedLabel}</span>}
+    <div id="top" className={`cv-root${editing ? " editing" : ""}`}>
+      <section className="pf-hero">
+        <Nav
+          onAdd={writable && !editing ? () => createWork.current() : undefined}
+          writable={writable}
+          extra={
+            writable && (
+              <a href="#edit" className={editing ? "on" : ""} onClick={(e) => (e.preventDefault(), editing ? void done() : setEditing(true))}>
+                {editing ? "done" : "edit"}
+                {editing && <span className="corner-sub"> {savedLabel}</span>}
+              </a>
+            )
+          }
+        />
+        <Dither src="/dove.svg" size={112} className="dove" />
+        <Card profile={p} />
+        <div className="pf-foot">
+          <span>03 — Curriculum vitae</span>
+          <span>Scroll ↓</span>
         </div>
-      )}
+      </section>
 
-      {/* intro */}
-      <div className="grid">
-        <div />
-        <div className="cv-intro">
+      <div className="wrap">
+        {/* intro */}
+        <div className="g12 cv-intro">
           {editing ? (
             <>
               <input className="cv-lead" value={p.intro} onChange={(e) => setP({ ...p, intro: e.target.value })} placeholder="한 문장" />
@@ -151,82 +171,80 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
             </>
           )}
         </div>
-        <div />
-      </div>
 
-      {/* sections */}
-      {p.sections.map((s) => (
-        <section key={s.id} data-section={s.id} className={cls("grid cv-block", { kind: "section", id: s.id })}>
-          <div>
-            {editing ? (
-              <div className="cv-label cv-label-edit">
-                <span className="cv-handle" title="끌어서 순서 바꾸기" onPointerDown={(e) => startDrag({ kind: "section", id: s.id }, e)}>
-                  ≡
-                </span>
-                <input value={s.label} onChange={(e) => setSection(s.id, (x) => ({ ...x, label: e.target.value }))} placeholder="섹션" />
-                <span className="cv-x" onClick={() => removeSection(s.id)} style={{ color: confirm === s.id ? "#1F1D1A" : undefined }}>
-                  {confirm === s.id ? "정말" : "×"}
-                </span>
-              </div>
-            ) : (
-              <div className="cv-label">{s.label}</div>
-            )}
+        {/* sections */}
+        {p.sections.map((s, i) => (
+          <section key={s.id} data-section={s.id} className={cls("g12 cv-block", { kind: "section", id: s.id })}>
+            <div className="c3">
+              {editing ? (
+                <div className="cv-label cv-label-edit">
+                  <span className="cv-handle" title="끌어서 순서 바꾸기" onPointerDown={(e) => startDrag({ kind: "section", id: s.id }, e)}>
+                    ≡
+                  </span>
+                  <span className="no">{num(i)}</span>
+                  <input value={s.label} onChange={(e) => setSection(s.id, (x) => ({ ...x, label: e.target.value }))} placeholder="섹션" />
+                  <span className="cv-x" onClick={() => removeSection(s.id)} style={{ color: confirm === s.id ? "var(--ac)" : undefined }}>
+                    {confirm === s.id ? "정말" : "×"}
+                  </span>
+                </div>
+              ) : (
+                <div className="cv-label">
+                  <span className="no">{num(i)}</span>
+                  <span className="lbl">{s.label}</span>
+                </div>
+              )}
+            </div>
+            <div className="c9">
+              {s.rows.map((r) => (
+                <div key={r.id} data-row={r.id} className={cls("cv-row", { kind: "row", section: s.id, id: r.id })}>
+                  {editing ? (
+                    <>
+                      <span className="cv-handle" title="끌어서 순서 바꾸기" onPointerDown={(e) => startDrag({ kind: "row", section: s.id, id: r.id }, e)}>
+                        ≡
+                      </span>
+                      <input className="cv-title" value={r.title} onChange={(e) => setRow(s.id, r.id, { title: e.target.value })} placeholder="이름" />
+                      <input className="cv-sub-text" value={r.sub} onChange={(e) => setRow(s.id, r.id, { sub: e.target.value })} placeholder="설명" />
+                      <input className="cv-when" value={r.when} onChange={(e) => setRow(s.id, r.id, { when: e.target.value })} placeholder="기간" />
+                      <span className="cv-x" onClick={() => removeRow(s.id, r.id)} style={{ color: confirm === r.id ? "var(--ac)" : undefined }}>
+                        {confirm === r.id ? "정말" : "×"}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="cv-title">{r.title}</span>
+                      <span className="cv-sub-text">{r.sub}</span>
+                      <span className="cv-when">{r.when}</span>
+                    </>
+                  )}
+                </div>
+              ))}
+              {editing && (
+                <div className="cv-add" onClick={() => addRow(s.id)}>
+                  + 항목
+                </div>
+              )}
+            </div>
+          </section>
+        ))}
+        {editing && (
+          <div className="g12">
+            <div className="c3" />
+            <div className="c9 cv-add section" onClick={addSection}>
+              + 섹션
+            </div>
           </div>
-          <div>
-            <div className="cv-line" />
-            {s.rows.map((r) => (
-              <div key={r.id} data-row={r.id} className={cls("cv-row", { kind: "row", section: s.id, id: r.id })}>
-                {editing ? (
-                  <>
-                    <span className="cv-handle" title="끌어서 순서 바꾸기" onPointerDown={(e) => startDrag({ kind: "row", section: s.id, id: r.id }, e)}>
-                      ≡
-                    </span>
-                    <input className="cv-title" value={r.title} onChange={(e) => setRow(s.id, r.id, { title: e.target.value })} placeholder="이름" />
-                    <input className="cv-sub-text" value={r.sub} onChange={(e) => setRow(s.id, r.id, { sub: e.target.value })} placeholder="설명" />
-                    <input className="cv-when" value={r.when} onChange={(e) => setRow(s.id, r.id, { when: e.target.value })} placeholder="기간" />
-                    <span className="cv-x" onClick={() => removeRow(s.id, r.id)} style={{ color: confirm === r.id ? "#1F1D1A" : undefined }}>
-                      {confirm === r.id ? "정말" : "×"}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="cv-title">{r.title}</span>
-                    <span className="cv-sub-text">{r.sub}</span>
-                    <span className="cv-when">{r.when}</span>
-                  </>
-                )}
-              </div>
-            ))}
-            {editing && (
-              <div className="cv-add" onClick={() => addRow(s.id)}>
-                + 항목
-              </div>
-            )}
-          </div>
-          <div />
-        </section>
-      ))}
-      {editing && (
-        <div className="grid">
-          <div />
-          <div className="cv-add section" onClick={addSection}>
-            + 섹션
-          </div>
-          <div />
-        </div>
-      )}
+        )}
 
-      <PortfolioWorks works={works} writable={writable} editId={editId} hideAdd={editing} reorder={editing} />
+        <PortfolioWorks works={works} writable={writable} editId={editId} reorder={editing} no={num(p.sections.length)} createRef={createWork} />
 
-      {/* contacts */}
-      {(p.contacts.length > 0 || editing) && (
-        <section className="grid cv-block">
-          <div>
-            <div className="cv-label">연락</div>
-          </div>
-          <div>
-            <div className="cv-line" />
-            <div className="cv-contacts">
+        {/* contacts */}
+        {(p.contacts.length > 0 || editing) && (
+          <section className="g12 cv-block">
+            <div className="c3 cv-label">
+              <span className="no">{num(p.sections.length + 1)}</span>
+              <span className="lbl">Contact</span>
+            </div>
+            <div className="c9">
               {p.contacts.map((c) => (
                 <div key={c.id} data-contact={c.id} className={cls("cv-contact", { kind: "contact", id: c.id })}>
                   {editing ? (
@@ -237,7 +255,7 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
                       <input className="cv-contact-label" value={c.label} onChange={(e) => setContact(c.id, { label: e.target.value })} placeholder="구분" />
                       <input className="cv-contact-value" value={c.value} onChange={(e) => setContact(c.id, { value: e.target.value })} placeholder="보이는 글자" />
                       <input className="cv-contact-href" value={c.href} onChange={(e) => setContact(c.id, { href: e.target.value })} placeholder="주소 (mailto:, https://)" spellCheck={false} />
-                      <span className="cv-x" onClick={() => removeContact(c.id)} style={{ color: confirm === c.id ? "#1F1D1A" : undefined }}>
+                      <span className="cv-x" onClick={() => removeContact(c.id)} style={{ color: confirm === c.id ? "var(--ac)" : undefined }}>
                         {confirm === c.id ? "정말" : "×"}
                       </span>
                     </>
@@ -261,10 +279,10 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
                 </div>
               )}
             </div>
-          </div>
-          <div />
-        </section>
-      )}
+          </section>
+        )}
+      </div>
+      <Footer />
     </div>
   );
 }

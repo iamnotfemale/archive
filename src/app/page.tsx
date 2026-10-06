@@ -1,17 +1,21 @@
-import Link from "next/link";
-import { site } from "@/content/site";
+import Home from "@/components/Home";
+import { canWrite } from "@/lib/auth";
+import { getStore } from "@/lib/store";
+import type { Item } from "@/lib/types";
 
-export default function Home() {
-  return (
-    <div className="landing">
-      <div className="landing-intro landing-name">{site.name}</div>
-      <nav className="landing-routes">
-        {site.routes.map((r, i) => (
-          <Link key={r.href} href={r.href} className="landing-route" style={{ animationDelay: `${200 + i * 90}ms` }}>
-            {r.label}
-          </Link>
-        ))}
-      </nav>
-    </div>
-  );
+export const dynamic = "force-dynamic";
+
+export default async function Page() {
+  let items: Item[] = [];
+  let posts = 0;
+  try {
+    const store = await getStore();
+    const [i, p] = await Promise.all([store.list(), store.listPosts()]);
+    items = i;
+    posts = p.filter((x) => x.status === "published" && x.scope === "public").length;
+  } catch {
+    /* empty archive */
+  }
+  const writable = await canWrite();
+  return <Home items={items} posts={posts} writable={writable} locked={!writable} />;
 }

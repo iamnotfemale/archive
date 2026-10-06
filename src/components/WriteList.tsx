@@ -1,74 +1,28 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Post } from "@/lib/types";
-import { dayLabel, monthKey, monthLabel } from "@/lib/format";
+import { fullDate } from "@/lib/format";
 import { excerpt } from "@/lib/markdown";
-import Rail from "./Rail";
+import Nav from "./Nav";
+import Dither from "./Dither";
+import Footer from "./Footer";
 import EditorSheet from "./EditorSheet";
 
-const ALL = "전체";
-const ROW_MAX = 60;
-const INK = "#1F1D1A";
-const INK_45 = "rgba(31,29,26,.45)";
-
-type Props = { posts: Post[]; writable: boolean; editId?: string | null };
-
+const pad = (n: number) => String(n + 1).padStart(2, "0");
 const when = (p: Post) => p.publishedAt ?? p.updatedAt;
+const readMin = (body: string) => Math.max(1, Math.round(body.replace(/\s/g, "").length / 500));
 
-export default function WriteList({ posts: initial, writable, editId = null }: Props) {
+export default function WriteList({ posts: initial, writable, editId = null }: { posts: Post[]; writable: boolean; editId?: string | null }) {
   const router = useRouter();
   const [posts, setPosts] = useState(initial);
-  const [filter, setFilter] = useState(ALL);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [q, setQ] = useState("");
-  const [slashHover, setSlashHover] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState("");
   const [editing, setEditing] = useState<Post | null>(() => (writable && editId ? initial.find((p) => p.id === editId) ?? null : null));
-  const searchInput = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const tags = useMemo(() => [...new Set(posts.map((p) => p.tag).filter(Boolean))], [posts]);
+  const sorted = useMemo(() => [...posts].sort((a, b) => when(b).localeCompare(when(a))), [posts]);
+  const drafts = posts.filter((p) => p.status === "draft").length;
 
-  const tags = useMemo(() => {
-    const count = new Map<string, number>();
-    for (const p of posts) if (p.tag) count.set(p.tag, (count.get(p.tag) ?? 0) + 1);
-    return [...count.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "ko")).map(([t]) => t);
-  }, [posts]);
-
-  const months = useMemo(() => {
-    const map = new Map<string, Post[]>();
-    for (const p of posts) {
-      const k = monthKey(when(p));
-      if (!map.has(k)) map.set(k, []);
-      map.get(k)!.push(p);
-    }
-    return [...map.entries()]
-      .sort((a, b) => b[0].localeCompare(a[0]))
-      .map(([key, rows]) => ({ key, label: monthLabel(key), rows: rows.sort((a, b) => when(b).localeCompare(when(a))) }));
-  }, [posts]);
-
-  const ql = q.trim().toLowerCase();
-  const visible = (p: Post) => {
-    if (filter !== ALL && p.tag !== filter) return false;
-    if (!ql) return true;
-    return [p.title, p.subtitle, p.tag, excerpt(p.body, 400)].some((s) => s.toLowerCase().includes(ql));
-  };
-  const matchCount = ql ? posts.filter(visible).length : null;
-
-  const openSearch = () => {
-    setSearchOpen(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    setTimeout(() => {
-      searchInput.current?.focus();
-      searchInput.current?.select();
-    }, 60);
-  };
-  const clearSearch = () => {
-    setSearchOpen(false);
-    setQ("");
-  };
-
-  /* ---------- editor overlay ---------- */
   const openEditor = (p: Post) => {
     setEditing(p);
     window.history.replaceState(null, "", `/write?edit=${p.id}`);
@@ -83,7 +37,6 @@ export default function WriteList({ posts: initial, writable, editId = null }: P
       document.body.style.overflow = "";
     };
   }, [editing]);
-
   const newDraft = async () => {
     if (busy) return;
     setBusy(true);
@@ -91,147 +44,54 @@ export default function WriteList({ posts: initial, writable, editId = null }: P
       const res = await fetch("/api/posts", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" });
       if (!res.ok) throw new Error(String(res.status));
       const { post } = (await res.json()) as { post: Post };
-      setPosts((prev) => [post, ...prev]);
+      setPosts((p) => [post, ...p]);
       openEditor(post);
-    } catch {
-      setNote("잠시 뒤에 다시 시도해 주세요");
-      setTimeout(() => setNote(""), 3000);
     } finally {
       setBusy(false);
     }
   };
-  const onChange = (p: Post) => setPosts((prev) => prev.map((x) => (x.id === p.id ? p : x)));
-  const onDelete = (id: string) => {
-    setPosts((prev) => prev.filter((x) => x.id !== id));
-    closeEditor();
-  };
-
-  const keyRef = useRef((e: KeyboardEvent) => void e);
-  useEffect(() => {
-    keyRef.current = (e: KeyboardEvent) => {
-      if (editing) return; // the sheet owns the keyboard
-      const t = e.target as HTMLElement | null;
-      const inInput = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA");
-      if (e.key === "Escape" && searchOpen) {
-        clearSearch();
-        t?.blur?.();
-      } else if (e.key === "/" && !inInput) {
-        e.preventDefault();
-        if (searchOpen) searchInput.current?.focus();
-        else openSearch();
-      }
-    };
-  });
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => keyRef.current(e);
-    document.addEventListener("keydown", k);
-    return () => document.removeEventListener("keydown", k);
-  }, []);
-
-  const empty = posts.length === 0;
-  const drafts = posts.filter((p) => p.status === "draft").length;
-  const sideNote = empty ? "아직 쓴 글 없음" : drafts > 0 ? `초안 ${drafts}` : `쓴 글 ${posts.length}`;
-  const slashTransform = searchOpen ? "rotate(24deg)" : slashHover ? "rotate(10deg)" : "none";
-
-  const open = (p: Post) => {
-    if (p.status === "draft") {
-      if (writable) openEditor(p);
-    } else router.push(`/write/${p.slug}`);
-  };
+  const open = (p: Post) => (p.status === "draft" ? writable && openEditor(p) : router.push(`/write/${p.slug}`));
 
   return (
-    <div className="page">
-      <Rail>
-        <div className="side-note">{sideNote}</div>
-        {note && <div className="side-sub">{note}</div>}
-        {!empty && (
-          <div className="tags">
-            {[ALL, ...tags].map((name, i) => (
-              <span key={name} className={`tag${filter === name ? " active" : ""}`} style={{ animationDelay: `${Math.min(i, 12) * 40}ms` }} onClick={() => setFilter(name)}>
-                {name}
-              </span>
-            ))}
+    <div id="top">
+      <section className="w-hero">
+        <Nav onAdd={writable ? () => void newDraft() : undefined} writable={writable} />
+        <Dither shape="square" className="w-canvas" />
+        <div className="w-title">
+          <div className="kicker">
+            02 — {posts.length - drafts} essays{drafts ? `, ${drafts} drafts` : ""}
           </div>
-        )}
-      </Rail>
-
-      {writable && (
-        <div className="corner plus" title="새 글" style={{ transform: editing ? "rotate(45deg)" : "none", color: busy || editing ? INK_45 : INK }} onClick={() => (editing ? closeEditor() : void newDraft())}>
-          +
+          <h1>
+            Writing<span style={{ color: "var(--ac)" }}>,</span>
+            <br />
+            <span className="sub">
+              mostly about building
+              <br />
+              and remembering.
+            </span>
+          </h1>
         </div>
-      )}
-      <div
-        className="corner slash"
-        title="찾기 ( / )"
-        style={{ transform: slashTransform, color: searchOpen || empty ? INK_45 : INK }}
-        onMouseEnter={() => setSlashHover(true)}
-        onMouseLeave={() => setSlashHover(false)}
-        onClick={() => (searchOpen ? clearSearch() : openSearch())}
-      >
-        /
-      </div>
-
-      <div className="body">
-        <div className="panel" inert={!searchOpen} style={{ maxHeight: searchOpen ? 120 : 0, opacity: searchOpen ? 1 : 0 }}>
-          <div className="grid">
-            <div />
-            <div className="field lg" style={{ marginBottom: 36 }}>
-              <input ref={searchInput} value={q} onChange={(e) => setQ(e.target.value)} placeholder="찾을 말" spellCheck={false} />
-              {matchCount !== null && <span className="count">{matchCount}</span>}
+      </section>
+      <div className="wrap">
+        {sorted.map((p, i) => (
+          <div key={p.id} className={`g12 prow${p.status === "draft" ? " draft" : ""}`} onClick={() => open(p)}>
+            <div className="c3">
+              <span>{pad(i)}</span>
+              {p.status === "draft" ? "Draft" : fullDate(when(p))}
             </div>
-            <div />
+            <div className="ptitle">{p.title || "Untitled"}</div>
+            <div className="pex">
+              {p.subtitle || excerpt(p.body, 80)}
+              <br />
+              <small>{readMin(p.body)} min read</small>
+            </div>
           </div>
-        </div>
-
-        {months.map((m, mi) => {
-          const anyVisible = m.rows.some(visible);
-          return (
-            <div key={m.key} className="grid month" style={{ opacity: anyVisible ? 1 : 0.35 }}>
-              <div className="month-label-col">
-                <div className="month-label">{m.label}</div>
-              </div>
-              <div>
-                {mi > 0 && <div className="month-line" />}
-                <div className="month-rows">
-                  {m.rows.map((p, i) => {
-                    const vis = visible(p);
-                    const draft = p.status === "draft";
-                    const state = draft ? "초안" : p.scope === "unlisted" ? "링크만" : "";
-                    return (
-                      <div key={p.id} className="row-wrap" style={{ opacity: vis ? 1 : 0, maxHeight: vis ? ROW_MAX : 0 }}>
-                        <div className={`row link${draft ? " draft" : ""}`} style={{ animationDelay: `${Math.min((mi * 4 + i) * 45, 1000)}ms` }} onClick={() => open(p)}>
-                          <span className="row-line" />
-                          <span className="row-title">{p.title || "제목 없음"}</span>
-                          {state && <span className="row-meta domain">{state}</span>}
-                          {p.tag && <span className="row-meta tagname">{p.tag}</span>}
-                          <span className="row-meta date">{dayLabel(when(p))}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div />
-            </div>
-          );
-        })}
+        ))}
+        {!posts.length && <p className="empty-note">Nothing written yet.</p>}
       </div>
-
-      {empty && (
-        <div className="empty-state">
-          <div className="empty-state-h">아직 아무 글도 없습니다.</div>
-        </div>
-      )}
-
-      {/* editor rises over the blurred list */}
-      <div
-        className={`veil editor-veil${editing ? " open" : ""}`}
-        inert={!editing}
-        onMouseDown={(e) => {
-          if (e.target === e.currentTarget) closeEditor();
-        }}
-      >
-        <div className="sheet editor-sheet">{editing && <EditorSheet key={editing.id} post={editing} tags={tags} onChange={onChange} onClose={closeEditor} onDelete={onDelete} />}</div>
+      <Footer />
+      <div className={`veil editor-veil${editing ? " open" : ""}`} inert={!editing} onMouseDown={(e) => e.target === e.currentTarget && closeEditor()}>
+        <div className="sheet editor-sheet">{editing && <EditorSheet key={editing.id} post={editing} tags={tags} onChange={(p) => setPosts((x) => x.map((y) => (y.id === p.id ? p : y)))} onClose={closeEditor} onDelete={(id) => (setPosts((x) => x.filter((y) => y.id !== id)), closeEditor())} />}</div>
       </div>
     </div>
   );

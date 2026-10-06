@@ -1,14 +1,7 @@
 import type { Metadata } from "next";
-import { Noto_Serif_KR } from "next/font/google";
 import "./globals.css";
 import InkSplash from "@/components/InkSplash";
-
-const serif = Noto_Serif_KR({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-serif",
-  display: "swap",
-});
+import Chrome from "@/components/Chrome";
 
 export const metadata: Metadata = {
   title: "archive",
@@ -17,8 +10,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko" className={serif.variable}>
+    <html lang="ko">
       <head>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
@@ -27,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         <InkSplash />
+        <Chrome />
       </body>
     </html>
   );

@@ -1,4 +1,3 @@
-import Rail from "@/components/Rail";
 import Cv from "@/components/Cv";
 import { site } from "@/content/site";
 import { defaultProfile } from "@/content/profile";
@@ -23,13 +22,5 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   } catch {
     works = [];
   }
-
-  return (
-    <div className="page cv">
-      <Rail />
-      <div className="body cv-body">
-        <Cv profile={profile} works={works} writable={writable} editId={edit ?? null} />
-      </div>
-    </div>
-  );
+  return <Cv profile={profile} works={works} writable={writable} editId={edit ?? null} />;
 }
