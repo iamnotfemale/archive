@@ -148,7 +148,7 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
             )
           }
         />
-        <Dither src="/dove.svg" size={112} className="dove" />
+        <Dither src="/dove.png" size={112} className="dove" />
         <Card profile={p} />
         <div className="pf-foot">
           <span>03 — Curriculum vitae</span>
