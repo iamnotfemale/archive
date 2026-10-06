@@ -35,17 +35,21 @@ export default async function WorkPage({ params }: Props) {
       <Nav />
       <div className="wrap">
         <div className="g12 read-head">
-          <div className="c3 read-side">
-            <Link href="/">← Portfolio</Link>
-            {w.year && <span>{w.year}</span>}
-            {w.kind && <span>{w.kind}</span>}
-            {w.status === "draft" && <span style={{ color: "var(--ac)" }}>Draft</span>}
-            {writable && <OwnerActions editHref={`/?edit=${w.id}`} deleteUrl={`/api/works/${w.id}`} afterDelete="/" />}
+          <div className="read-main">
+            <Link href="/" className="read-back">
+              ← Portfolio
+            </Link>
+            <h1>{w.title || "Untitled"}</h1>
+            {w.note && <p className="read-sub">{w.note}</p>}
+            <div className="read-meta">
+              {w.year && <span>{w.year}</span>}
+              {w.kind && <span>{w.kind}</span>}
+              {w.status === "draft" && <span style={{ color: "var(--ac)" }}>Draft</span>}
+              {writable && <OwnerActions editHref={`/?edit=${w.id}`} deleteUrl={`/api/works/${w.id}`} afterDelete="/" />}
+            </div>
           </div>
-          <h1>{w.title || "Untitled"}</h1>
         </div>
         <div className="g12 read-body">
-          <div className="c3 read-lede">{w.note}</div>
           <div className="read-text">{renderBody(w.body)}</div>
         </div>
         {next && (

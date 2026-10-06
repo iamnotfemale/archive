@@ -37,20 +37,24 @@ export default async function PostPage({ params }: Props) {
       <Nav />
       <div className="wrap">
         <div className="g12 read-head">
-          <div className="c3 read-side">
-            <Link href="/write">← Writing</Link>
-            <span>
-              {String(idx + 1).padStart(2, "0")} · {fullDate(when)}
-            </span>
-            <span>{mins} min read</span>
-            {post.tag && <span>{post.tag}</span>}
-            {post.status === "draft" && <span style={{ color: "var(--ac)" }}>Draft</span>}
-            {writable && <OwnerActions editHref={`/write?edit=${post.id}`} deleteUrl={`/api/posts/${post.id}`} afterDelete="/write" />}
+          <div className="read-main">
+            <Link href="/write" className="read-back">
+              ← Writing
+            </Link>
+            <h1>{post.title || "Untitled"}</h1>
+            {post.subtitle && <p className="read-sub">{post.subtitle}</p>}
+            <div className="read-meta">
+              <span>
+                {String(idx + 1).padStart(2, "0")} · {fullDate(when)}
+              </span>
+              <span>{mins} min read</span>
+              {post.tag && <span>{post.tag}</span>}
+              {post.status === "draft" && <span style={{ color: "var(--ac)" }}>Draft</span>}
+              {writable && <OwnerActions editHref={`/write?edit=${post.id}`} deleteUrl={`/api/posts/${post.id}`} afterDelete="/write" />}
+            </div>
           </div>
-          <h1>{post.title || "Untitled"}</h1>
         </div>
         <div className="g12 read-body">
-          <div className="c3 read-lede">{post.subtitle}</div>
           <div className="read-text">{renderBody(post.body)}</div>
         </div>
         {next && next.id !== post.id && (

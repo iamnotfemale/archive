@@ -1973,3 +1973,13 @@ input.cv-sub {
 /* ---------- writing: reorder mode ---------- */
 .prow.editable { position: relative; cursor: default; }
 .prow.editable:hover { background: none; color: inherit; }
+
+/* ---------- reading head: back / title / subtitle / meta in one column ---------- */
+.read-main { grid-column: 4 / span 8; display: grid; row-gap: 18px; }
+.read-head .read-main h1 { grid-column: auto; }
+.read-back { font-size: 12px; color: var(--mute); }
+.read-back:hover { color: var(--ac); }
+.read-sub { margin: -4px 0 0; font-size: 18px; color: var(--mute); text-wrap: pretty; max-width: 48ch; }
+.read-meta { display: flex; gap: 14px; align-items: baseline; font-size: 12px; color: var(--mute); }
+.read-meta .owner-actions { margin-left: 0; }
+@media (max-width: 900px) { .read-main { grid-column: 1 / -1; } }
