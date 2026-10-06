@@ -7,6 +7,17 @@ export const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 export const SHAPES: Record<string, (u: number, v: number) => [number, number, number] | null> = {
   circle: (u, v) => (u * u + v * v <= 0.92 ? [u, v, Math.sqrt(1 - u * u - v * v)] : null),
   square: (u, v) => (Math.abs(u) <= 0.86 && Math.abs(v) <= 0.86 ? [u, v, 0.55 + (u - v) * 0.22] : null),
+  // Erlenmeyer flask: rim, neck, then a widening body; normal = (u, v, rim curvature)
+  flask: (u, v) => {
+    const rim = (w: number) => 0.3 + Math.sqrt(Math.max(0, 1 - (u / w) * (u / w))) * 0.65;
+    if (Math.abs(u) <= 0.2 && v >= -0.94 && v <= -0.84) return [u, v, rim(0.2)];
+    if (Math.abs(u) <= 0.14 && v > -0.84 && v <= -0.3) return [u, v, rim(0.14)];
+    if (v > -0.3 && v <= 0.82) {
+      const w = 0.14 + ((v + 0.3) / 1.12) * 0.62;
+      if (Math.abs(u) <= w) return [u, v, rim(w)];
+    }
+    return null;
+  },
   // isometric cube: hexagon silhouette; top rhombus + left and right faces, each with a flat normal
   cube: (u, v) => {
     const x = u / 0.9;
@@ -33,7 +44,7 @@ function bindMouse() {
 }
 
 /** Bayer-dithered 3D-lit shape (circle / square), or a dithered image (src), 72–112px grid upscaled with pixelated rendering. */
-export default function Dither({ shape = "circle", src, size = 72, className }: { shape?: "circle" | "square" | "cube"; src?: string; size?: number; className?: string }) {
+export default function Dither({ shape = "circle", src, size = 72, className }: { shape?: "circle" | "square" | "cube" | "flask"; src?: string; size?: number; className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     bindMouse();
@@ -102,7 +113,26 @@ export default function Dither({ shape = "circle", src, size = 72, className }: 
             const s = Math.max(0, (nrm[0] * lx + nrm[1] * ly + nrm[2] * lz) / (ln * nl));
             const noise = Math.sin(u * 9 + t) * Math.cos(v * 9 - t) * 0.12;
             const on = Math.pow(s, 1.4) * 0.9 + noise + 0.08 > (BAYER[(j % 4) * 4 + (i % 4)] + 0.5) / 16;
-            d[o] = d[o + 1] = d[o + 2] = on ? 242 : 11;
+            if (shape === "flask" && v > 0.42 + Math.sin(u * 4 + t * 9) * 0.025) {
+              // liquid: green instead of ink, with three rising paper-coloured bubbles
+              const bt = performance.now() / 1000;
+              let bubble = false;
+              for (let b = 0; b < 3; b++) {
+                const bx = Math.sin(b * 2.1) * 0.2;
+                const by = 0.82 - ((bt * 0.3 + b * 0.37) % 1) * 0.38;
+                if (Math.hypot(u - bx, v - by) < 0.04) bubble = true;
+              }
+              if (bubble) d[o] = d[o + 1] = d[o + 2] = 242;
+              else if (on) {
+                d[o] = 214;
+                d[o + 1] = 242;
+                d[o + 2] = 222;
+              } else {
+                d[o] = 11;
+                d[o + 1] = 168;
+                d[o + 2] = 74;
+              }
+            } else d[o] = d[o + 1] = d[o + 2] = on ? 242 : 11;
             d[o + 3] = 255;
           }
       }

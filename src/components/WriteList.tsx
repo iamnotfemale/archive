@@ -6,6 +6,7 @@ import type { Post } from "@/lib/types";
 import { fullDate } from "@/lib/format";
 import { excerpt } from "@/lib/markdown";
 import Link from "next/link";
+import { lab } from "@/content/lab";
 import Bizcard, { tiltHandlers } from "./Bizcard";
 import Nav from "./Nav";
 import Dither from "./Dither";
@@ -123,6 +124,10 @@ export default function WriteList({ posts: initial, items, writable, editId = nu
             <span>Writing</span>
             <span className="mute">{posts.length}</span>
           </a>
+          <Link href="/lab">
+            <span>Lab</span>
+            <span className="mute">{lab.length}</span>
+          </Link>
           <a href="#search" className="gap" onClick={(e) => (e.preventDefault(), setSearch(true))}>
             <span>Search</span>
             <span className="mute">/</span>

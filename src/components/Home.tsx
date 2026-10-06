@@ -9,6 +9,7 @@ import { extractUrls } from "@/lib/url";
 import Dither from "./Dither";
 import Fields from "./Fields";
 import Footer from "./Footer";
+import { lab } from "@/content/lab";
 import Bizcard, { tiltHandlers } from "./Bizcard";
 import Nav from "./Nav";
 import { AddDrawer, SearchOverlay, type DrawerState } from "./Overlays";
@@ -112,6 +113,10 @@ export default function Home({ items: initial, posts, writable, locked }: { item
           <Link href="/write">
             <span>Writing</span>
             <span className="mute">{posts}</span>
+          </Link>
+          <Link href="/lab">
+            <span>Lab</span>
+            <span className="mute">{lab.length}</span>
           </Link>
           <a href="#search" className="gap" onClick={(e) => (e.preventDefault(), setSearch(true))}>
             <span>Search</span>

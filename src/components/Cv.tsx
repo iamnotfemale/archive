@@ -9,7 +9,7 @@ import Footer from "./Footer";
 import Card from "./Card";
 import { SearchOverlay } from "./Overlays";
 
-const num = (i: number) => `03.${i + 1}`;
+const num = (i: number) => `04.${i + 1}`;
 
 type Props = { profile: Profile; works: Work[]; writable: boolean; editId?: string | null };
 
@@ -169,7 +169,7 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
         <Dither src="/dove.png" size={112} className="dove" />
         <Card profile={p} />
         <div className="pf-foot">
-          <span>03 — Curriculum vitae</span>
+          <span>04 — Curriculum vitae</span>
           <span>Scroll ↓</span>
         </div>
       </section>
