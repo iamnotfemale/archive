@@ -1,4 +1,5 @@
 import Cv from "@/components/Cv";
+import { loadStudio } from "@/components/FromStudio";
 import { site } from "@/content/site";
 import { defaultProfile } from "@/content/profile";
 import { canWrite } from "@/lib/auth";
@@ -22,5 +23,6 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   } catch {
     works = [];
   }
-  return <Cv profile={profile} works={works} writable={writable} editId={edit ?? null} />;
+  const studio = await loadStudio();
+  return <Cv profile={profile} works={works} studio={studio} writable={writable} editId={edit ?? null} />;
 }

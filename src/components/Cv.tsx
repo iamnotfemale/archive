@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Contact, CvRow, CvSection, Profile, Work } from "@/lib/types";
 import PortfolioWorks from "./PortfolioWorks";
+import FromStudio, { type StudioThing } from "./FromStudio";
 import Nav from "./Nav";
 import Dither from "./Dither";
 import Footer from "./Footer";
@@ -11,14 +12,14 @@ import { SearchOverlay } from "./Overlays";
 
 const num = (i: number) => `04.${i + 1}`;
 
-type Props = { profile: Profile; works: Work[]; writable: boolean; editId?: string | null };
+type Props = { profile: Profile; works: Work[]; studio?: StudioThing[]; writable: boolean; editId?: string | null };
 
 type Drag = { kind: "row"; section: string; id: string } | { kind: "section"; id: string } | { kind: "contact"; id: string };
 
 const uid = () => Math.random().toString(36).slice(2, 8);
 
 /** 이력 부분. "수정"을 누르면 같은 자리에서 고치고, 손잡이를 끌어 순서를 바꾼다. */
-export default function Cv({ profile: initial, works, writable, editId = null }: Props) {
+export default function Cv({ profile: initial, works, studio = [], writable, editId = null }: Props) {
   const [p, setP] = useState<Profile>(initial);
   const [editing, setEditing] = useState(false);
   const [search, setSearch] = useState(false);
@@ -294,11 +295,13 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
 
         <PortfolioWorks works={works} writable={writable} editId={editId} reorder={editing} no={num(p.sections.length)} createRef={createWork} />
 
+        {!editing && <FromStudio items={studio} no={num(p.sections.length + 1)} />}
+
         {/* contacts */}
         {(p.contacts.length > 0 || editing) && (
           <section className="g12 cv-block">
             <div className="c3 cv-label">
-              <span className="no">{num(p.sections.length + 1)}</span>
+              <span className="no">{num(p.sections.length + (studio.length ? 2 : 1))}</span>
               <span className="lbl">Contact</span>
             </div>
             <div className="c9">
