@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Work } from "@/lib/types";
 import WorkEditorSheet from "./WorkEditorSheet";
+import { firstImage } from "@/lib/markdown";
 
 type Props = { works: Work[]; writable: boolean; editId?: string | null; reorder?: boolean; no: string; createRef: React.RefObject<() => void> };
 
@@ -103,26 +104,52 @@ export default function PortfolioWorks({ works: initial, writable, editId = null
         </div>
         <div className="c9">
           {shownWorks.length === 0 && <p className="empty-note">Press + to add the first work.</p>}
-          {shownWorks.map((w) => (
-            <div
-              key={w.id}
-              data-work={w.id}
-              className={`cv-row${reorder ? " editable" : " link"}${dragId === w.id ? " dragging" : ""}`}
-              onClick={() => !reorder && open(w)}
-            >
-              {reorder && (
+          {reorder ? (
+            shownWorks.map((w) => (
+              <div key={w.id} data-work={w.id} className={`cv-row editable${dragId === w.id ? " dragging" : ""}`}>
                 <span className="cv-handle" title="끌어서 순서 바꾸기" onPointerDown={(e) => startDrag(w.id, e)}>
                   ≡
                 </span>
-              )}
-              <span className="cv-title">{w.title || "Untitled"}</span>
-              <span className="cv-sub-text">
-                {w.status === "draft" && <span style={{ color: "var(--ac)" }}>Draft · </span>}
-                {w.note || w.kind}
-              </span>
-              <span className="cv-when">{w.year}</span>
+                <span className="cv-title">{w.title || "Untitled"}</span>
+                <span className="cv-sub-text">{w.note || w.kind}</span>
+                <span className="cv-when">{w.year}</span>
+              </div>
+            ))
+          ) : (
+            <div className="wk-grid">
+              {shownWorks.map((w) => {
+                const img = w.thumb || firstImage(w.body);
+                return (
+                  <a
+                    key={w.id}
+                    href={`/portfolio/${w.slug}`}
+                    className={`wk-card${w.status === "draft" ? " draft" : ""}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      open(w);
+                    }}
+                  >
+                    <span className="wk-img">
+                      {img ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={img} alt="" loading="lazy" />
+                      ) : (
+                        <span className="wk-word">
+                          {(w.title || "untitled").toLowerCase()}
+                          <span className="ac">.</span>
+                        </span>
+                      )}
+                    </span>
+                    <span className="wk-meta">
+                      <span className="wk-t">{w.title || "Untitled"}</span>
+                      <span className="wk-y">{w.status === "draft" ? "Draft" : w.year}</span>
+                    </span>
+                    {(w.note || w.kind) && <span className="wk-n">{w.note || w.kind}</span>}
+                  </a>
+                );
+              })}
             </div>
-          ))}
+          )}
         </div>
       </section>
 

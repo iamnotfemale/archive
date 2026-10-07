@@ -236,7 +236,7 @@ export default function Cv({ profile: initial, works, writable, editId = null }:
                         <>
                           <span className="cv-title">
                             {r.title}
-                            {kids.length > 0 && <span className="cv-chev">{isOpen ? "−" : "+"}</span>}
+                            {kids.length > 0 && <span className="cv-chev">{isOpen ? "−" : `+${kids.length}`}</span>}
                           </span>
                           <span className="cv-sub-text">{r.sub}</span>
                           <span className="cv-when">{r.when}</span>

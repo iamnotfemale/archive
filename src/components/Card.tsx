@@ -20,7 +20,14 @@ export default function Card({ profile }: { profile: Profile }) {
       r.y += r.vy;
       r.x += r.vx;
     };
-    const up = () => (r.drag = false);
+    // on release, land on whichever face the card is closest to (counting the spin it still has)
+    const up = () => {
+      if (r.drag) {
+        const proj = r.y + r.vy * 8;
+        r.face = (((Math.round(proj / 180) * 180) % 360) + 360) % 360;
+      }
+      r.drag = false;
+    };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);

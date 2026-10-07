@@ -2486,3 +2486,61 @@ button:hover,
 .lab-card.dragging {
   opacity: 0.35;
 }
+
+
+/* ---------- CV · refined (view mode only; edit mode keeps its working rules) ---------- */
+.cv-root:not(.editing) .cv-block { border-top: 0; padding: 64px 0 24px; }
+.cv-root:not(.editing) .cv-block .c3 { align-self: start; position: sticky; top: 24px; }
+.cv-root:not(.editing) .cv-label { flex-direction: column; gap: 6px; }
+.cv-root:not(.editing) .cv-label .no { font-size: 11px; letter-spacing: 0.04em; }
+.cv-root:not(.editing) .cv-label .lbl { font-size: 28px; letter-spacing: -0.03em; }
+.cv-root:not(.editing) .cv-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "t w" "s w";
+  row-gap: 4px;
+  padding: 14px 16px;
+  margin: 0 -16px;
+  border-top: 0;
+  transition: background 0.2s;
+}
+.cv-root:not(.editing) .cv-row .cv-title { grid-area: t; font-size: 19px; font-weight: 500; letter-spacing: -0.02em; }
+.cv-root:not(.editing) .cv-row .cv-sub-text { grid-area: s; font-size: 14px; opacity: 1; color: var(--mute); }
+.cv-root:not(.editing) .cv-row .cv-when { grid-area: w; align-self: start; padding-top: 4px; font-size: 12px; opacity: 1; color: var(--mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cv-root:not(.editing) .cv-row:hover { background: #e9e9e4; color: inherit; }
+.cv-root:not(.editing) .cv-row:hover .cv-title { color: var(--ink); }
+.cv-root:not(.editing) .cv-chev { margin-left: 10px; padding: 1px 7px; font-size: 11px; font-weight: 400; letter-spacing: 0; border-radius: 999px; background: var(--ink); color: #fff; opacity: 1; vertical-align: 3px; }
+.cv-root:not(.editing) .cv-row.group:hover .cv-chev { background: var(--ac); }
+.cv-root:not(.editing) .cv-group.open > .cv-row .cv-chev { background: var(--ac); }
+.cv-root:not(.editing) .cv-kids { margin: 2px 0 10px 16px; padding-left: 18px; border-left: 2px solid var(--ac); }
+.cv-root:not(.editing) .cv-row.sub { padding: 8px 16px; margin: 0 -16px 0 -18px; padding-left: 18px; }
+.cv-root:not(.editing) .cv-row.sub::before { display: none; }
+.cv-root:not(.editing) .cv-row.sub .cv-title { font-size: 15px; }
+.cv-root:not(.editing) .cv-row.sub .cv-sub-text { font-size: 13px; }
+
+/* works: cards with thumbnails instead of rows */
+.wk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 24px; }
+.wk-card { display: grid; row-gap: 10px; align-content: start; min-width: 0; }
+.wk-card.draft { opacity: 0.55; }
+.wk-img { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 10; overflow: hidden; background: #e4e0d6; }
+.wk-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s var(--ease); }
+.wk-card:hover .wk-img img { transform: scale(1.03); }
+.wk-word { font-size: 34px; font-weight: 500; letter-spacing: -0.045em; color: var(--ink); }
+.wk-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.wk-t { font-size: 19px; font-weight: 500; letter-spacing: -0.02em; transition: color 0.2s; }
+.wk-card:hover .wk-t { color: var(--ac); }
+.wk-y { font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wk-n { font-size: 14px; color: var(--mute); margin-top: -4px; }
+
+/* contacts: a quiet 2-up grid, no rules */
+.cv-root:not(.editing) .cv-block .c9:has(> .cv-contact) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; }
+.cv-root:not(.editing) .cv-contact { grid-template-columns: 1fr; row-gap: 2px; border-top: 0; padding: 12px 16px; margin: 0 -16px; transition: background 0.2s; }
+.cv-root:not(.editing) .cv-contact:hover { background: #e9e9e4; }
+.cv-root:not(.editing) .cv-contact-value { font-size: 19px; font-weight: 500; }
+
+@media (max-width: 720px) {
+  .cv-root:not(.editing) .cv-block { padding-top: 48px; }
+  .cv-root:not(.editing) .cv-block .c3 { position: static; margin-bottom: 12px; }
+  .cv-root:not(.editing) .cv-label { flex-direction: row; align-items: baseline; gap: 10px; }
+  .cv-root:not(.editing) .cv-label .lbl { font-size: 24px; }
+  .wk-grid, .cv-root:not(.editing) .cv-block .c9:has(> .cv-contact) { grid-template-columns: 1fr; }
+}
