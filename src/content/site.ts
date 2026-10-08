@@ -14,7 +14,7 @@ export const site = {
     { href: "/", label: "/" },
   ],
   contacts: [
-    { label: "이메일", value: "yeoziphab@korea.ac.kr", href: "mailto:yeoziphab@korea.ac.kr" },
+    { label: "이메일", value: "contact@yeoziphab.com", href: "mailto:contact@yeoziphab.com" },
     { label: "인스타그램", value: "@gong.zip.hab", href: "https://instagram.com/gong.zip.hab" },
     { label: "깃허브", value: "iamnotfemale", href: "https://github.com/iamnotfemale" },
   ],
