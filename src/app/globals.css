@@ -1012,6 +1012,17 @@ textarea::placeholder {
   font-size: 16px;
   text-wrap: pretty;
 }
+.cv-pdf {
+  grid-column: 4 / span 6;
+  justify-self: start;
+  display: inline-block;
+  margin-top: 22px;
+  font-size: 13px;
+  border-bottom: 1px solid currentColor;
+}
+.cv-pdf:hover {
+  color: var(--ac);
+}
 .cv-contact {
   display: grid;
   grid-template-columns: 110px minmax(0, 1fr);

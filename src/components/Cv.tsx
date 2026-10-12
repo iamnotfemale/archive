@@ -187,6 +187,9 @@ export default function Cv({ profile: initial, works, studio = [], writable, edi
             <>
               <div className="cv-lead">{p.intro}</div>
               {p.sub && <div className="cv-sub">{p.sub}</div>}
+              <a className="cv-pdf" href="/Seungmin_Yeo_CV.pdf" download>
+                Download CV (PDF) ↓
+              </a>
             </>
           )}
         </div>
